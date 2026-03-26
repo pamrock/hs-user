@@ -26,16 +26,14 @@ import { House, Document, User } from '@element-plus/icons-vue'
 
 <style scoped>
 .user-layout-container {
-  /* 模拟手机端视图的容器 */
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  width: 100%;
-  max-width: 480px; /* 限制最大宽度，在PC上居中显示类似手机的界面 */
-  margin: 0 auto;
+  height: 100dvh;
+  width: 100vw;
+  max-width: 100vw;
+  margin: 0;
   background-color: #f7f8fa;
   position: relative;
-  box-shadow: 0 0 20px rgba(0,0,0,0.05);
 }
 
 .main-content {
