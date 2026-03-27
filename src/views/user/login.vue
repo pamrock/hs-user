@@ -2,7 +2,7 @@
   <div class="user-login-container">
     <div class="login-header">
       <h2>欢迎登录</h2>
-      <p>用户端服务平台</p>
+      <p>家政服务平台</p>
     </div>
     
     <div class="login-form">
