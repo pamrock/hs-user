@@ -46,6 +46,24 @@
               >
                 去支付
               </el-button>
+              <el-button
+                v-if="isInService(order.status)"
+                size="small"
+                type="success"
+                round
+                @click.stop="handleFinishOrder(order)"
+              >
+                完成订单
+              </el-button>
+              <el-button
+                v-if="isInService(order.status)"
+                size="small"
+                type="danger"
+                round
+                @click.stop="handleCancelOrder(order)"
+              >
+                取消订单
+              </el-button>
             </div>
           </div>
         </div>
@@ -85,7 +103,7 @@
 import { onMounted, reactive, ref } from 'vue'
 import { Picture } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getMyOrderList, getOrderDetail } from '@/api/order'
+import { cancelOrder, finishService, getMyOrderList, getOrderDetail } from '@/api/order'
 import { alipayPay } from '@/api/pay'
 
 const tabs = [
@@ -144,6 +162,7 @@ const handleCurrentChange = (value) => {
 }
 
 const isUnpaid = (status) => status?.toString() === '1'
+const isInService = (status) => status?.toString() === '4'
 
 const getStatusType = (status) => {
   const s = status?.toString()
@@ -239,6 +258,50 @@ const goPay = async (order) => {
     }
   } catch (error) {
     ElMessage.warning('支付跳转失败，请在订单中心继续支付')
+  }
+}
+
+const handleFinishOrder = async (order) => {
+  const orderId = order?.orderId || order?.id
+  if (!orderId) {
+    ElMessage.warning('订单号不存在，无法完成订单')
+    return
+  }
+  try {
+    const res = await finishService({ orderId })
+    if (!res?.success) {
+      ElMessage.warning(res?.msg || '完成订单失败，请稍后重试')
+      return
+    }
+    ElMessage.success('订单已完成')
+    await fetchList()
+    if (detailVisible.value && (currentOrder.value?.orderId || currentOrder.value?.id) === orderId) {
+      await viewDetail(orderId)
+    }
+  } catch (error) {
+    ElMessage.warning('完成订单失败，请稍后重试')
+  }
+}
+
+const handleCancelOrder = async (order) => {
+  const orderId = order?.orderId || order?.id
+  if (!orderId) {
+    ElMessage.warning('订单号不存在，无法取消订单')
+    return
+  }
+  try {
+    const res = await cancelOrder({ orderId, role: 2 })
+    if (!res?.success) {
+      ElMessage.warning(res?.msg || '取消订单失败，请稍后重试')
+      return
+    }
+    ElMessage.success('订单已取消')
+    await fetchList()
+    if (detailVisible.value && (currentOrder.value?.orderId || currentOrder.value?.id) === orderId) {
+      await viewDetail(orderId)
+    }
+  } catch (error) {
+    ElMessage.warning('取消订单失败，请稍后重试')
   }
 }
 

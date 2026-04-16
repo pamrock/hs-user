@@ -39,3 +39,13 @@ export function deleteOrder(data) {
 export function dispatchOrder(data) {
   return request.post('/order/dispatchOrder', data)
 }
+
+// 完成服务
+export function finishService(data) {
+  return request.post('/order/finishService', data)
+}
+
+// 取消订单
+export function cancelOrder(data) {
+  return request.post('/order/cancel', data)
+}
