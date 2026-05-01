@@ -49,3 +49,8 @@ export function finishService(data) {
 export function cancelOrder(data) {
   return request.post('/order/cancel', data)
 }
+
+// 获取可用服务日期和时段
+export function getAvailableSlots(data) {
+  return request.post('/order/available-slots', data)
+}

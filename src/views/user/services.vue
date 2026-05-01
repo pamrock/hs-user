@@ -157,16 +157,18 @@
     <el-drawer v-model="dateDrawerVisible" direction="btt" size="55%" :with-header="false" class="picker-drawer">
       <div class="drawer-panel">
         <h4>选择服务日期</h4>
-        <div class="picker-list">
+        <div v-if="slotsLoading" class="picker-list" style="text-align:center;padding:40px 0">加载中...</div>
+        <div v-else class="picker-list">
           <div
             v-for="date in dateOptions"
             :key="date.value"
             class="picker-item"
-            :class="{ active: orderForm.serviceDate === date.value }"
-            @click="selectServiceDate(date.value)"
+            :class="{ active: orderForm.serviceDate === date.value, 'picker-item-disabled': date.disabled }"
+            @click="!date.disabled && selectServiceDate(date.value)"
           >
             <div class="picker-main">
               <div class="picker-title">{{ date.label }}</div>
+              <div v-if="date.disabled" class="picker-desc">暂无可选时段</div>
             </div>
             <el-icon v-if="orderForm.serviceDate === date.value" color="#07c160"><Check /></el-icon>
           </div>
@@ -225,7 +227,7 @@ import { getItemList } from '@/api/item'
 import { getUserInfo } from '@/api/user'
 import { getCustomerAddressList } from '@/api/customer'
 import { getEmployeeList } from '@/api/employee'
-import { addOrder } from '@/api/order'
+import { addOrder, getAvailableSlots } from '@/api/order'
 import { alipayPay } from '@/api/pay'
 
 const loading = ref(false)
@@ -254,22 +256,18 @@ const orderForm = reactive({
   employeeId: null
 })
 
-const visitTimeRangeOptions = [
-  { label: '08:00-09:00', value: '08:00-09:00' },
-  { label: '09:00-10:00', value: '09:00-10:00' },
-  { label: '10:00-11:00', value: '10:00-11:00' },
-  { label: '11:00-12:00', value: '11:00-12:00' },
-  { label: '12:00-13:00', value: '12:00-13:00' },
-  { label: '13:00-14:00', value: '13:00-14:00' },
-  { label: '14:00-15:00', value: '14:00-15:00' },
-  { label: '15:00-16:00', value: '15:00-16:00' },
-  { label: '16:00-17:00', value: '16:00-17:00' },
-  { label: '17:00-18:00', value: '17:00-18:00' },
-  { label: '18:00-19:00', value: '18:00-19:00' },
-  { label: '19:00-20:00', value: '19:00-20:00' },
-  { label: '20:00-21:00', value: '20:00-21:00' },
-  { label: '21:00-22:00', value: '21:00-22:00' }
-]
+const availableSlotsData = ref(null)
+const slotsLoading = ref(false)
+
+const visitTimeRangeOptions = computed(() => {
+  if (!availableSlotsData.value?.availableDates || !orderForm.serviceDate) return []
+  const dateEntry = availableSlotsData.value.availableDates.find(d => d.date === orderForm.serviceDate)
+  if (!dateEntry || !dateEntry.timeSlots) return []
+  return dateEntry.timeSlots.map(slot => ({
+    label: `${slot.start}-${slot.end}`,
+    value: `${slot.start}-${slot.end}`
+  }))
+})
 
 const serviceTimeRangeOptions = [
   { label: '1小时', value: '1小时' },
@@ -282,17 +280,22 @@ const serviceTimeRangeOptions = [
 
 const weekNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
 const dateOptions = computed(() => {
-  return Array.from({ length: 14 }).map((_, index) => {
-    const date = new Date()
-    date.setDate(date.getDate() + index)
-    const year = date.getFullYear()
+  if (!availableSlotsData.value?.availableDates) return []
+  return availableSlotsData.value.availableDates.map(item => {
+    const date = new Date(item.date)
     const month = `${date.getMonth() + 1}`.padStart(2, '0')
     const day = `${date.getDate()}`.padStart(2, '0')
-    const value = `${year}-${month}-${day}`
-    const prefix = index === 0 ? '今天' : index === 1 ? '明天' : weekNames[date.getDay()]
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const diffDays = Math.floor((date - today) / (1000 * 60 * 60 * 24))
+    const prefix = item.isToday ? '今天'
+      : diffDays === 1 ? '明天'
+      : `${item.weekDay}`
+    const hasSlots = item.timeSlots && item.timeSlots.length > 0
     return {
-      value,
-      label: `${prefix} ${month}-${day}`
+      value: item.date,
+      label: `${prefix} ${month}-${day}`,
+      disabled: !hasSlots
     }
   })
 })
@@ -326,6 +329,7 @@ const resetOrderForm = () => {
   orderForm.visitTimeRange = ''
   orderForm.serviceTimeRange = ''
   orderForm.employeeId = null
+  availableSlotsData.value = null
 }
 
 const loadServiceList = async () => {
@@ -396,11 +400,26 @@ const loadEmployeeList = async () => {
   }
 }
 
+const loadAvailableSlots = async () => {
+  if (!currentItem.value?.id) return
+  slotsLoading.value = true
+  try {
+    const res = await getAvailableSlots({ serviceItemId: currentItem.value.id })
+    if (res.code === 200) {
+      availableSlotsData.value = res.data
+    }
+  } catch (error) {
+    ElMessage.error('加载可用时段失败')
+  } finally {
+    slotsLoading.value = false
+  }
+}
+
 const openDetail = async (item) => {
   currentItem.value = item
   currentView.value = 'detail'
   resetOrderForm()
-  await Promise.all([loadAddressList(), loadEmployeeList()])
+  await Promise.all([loadAddressList(), loadEmployeeList(), loadAvailableSlots()])
 }
 
 const backToList = () => {
@@ -420,6 +439,7 @@ const selectEmployee = (employee) => {
 
 const selectServiceDate = (date) => {
   orderForm.serviceDate = date
+  orderForm.visitTimeRange = ''
   dateDrawerVisible.value = false
 }
 
@@ -815,6 +835,12 @@ onMounted(() => {
 .picker-item.active {
   border-color: #95de64;
   background: #f6ffed;
+}
+
+.picker-item-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: #fafafa;
 }
 
 .picker-main {
