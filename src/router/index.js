@@ -42,6 +42,12 @@ export const constantRoutes = [
         name: 'UserProfile',
         component: () => import('@/views/user/profile.vue'),
         meta: { title: '我的' }
+      },
+      {
+        path: 'chat/:orderId',
+        name: 'UserChat',
+        component: () => import('@/views/user/chat.vue'),
+        meta: { title: '沟通', hidden: true }
       }
     ]
   },

@@ -94,6 +94,11 @@
           </el-descriptions-item>
           <el-descriptions-item label="下单时间">{{ currentOrder.createTime || '-' }}</el-descriptions-item>
         </el-descriptions>
+        <div v-if="currentOrder && canShowChatEntry((currentDetail && currentDetail.status) || currentOrder.status)" style="text-align:center;margin-top:16px;">
+          <el-button type="primary" round style="width:80%;background:linear-gradient(135deg, #1e3c72, #2a5298);border:none;" @click="goChat((currentDetail && currentDetail.orderId) || currentOrder.orderId || currentOrder.id)">
+            联系服务人员
+          </el-button>
+        </div>
       </div>
     </el-dialog>
   </div>
@@ -101,6 +106,7 @@
 
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { Picture } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { cancelOrder, finishService, getMyOrderList, getOrderDetail } from '@/api/order'
@@ -124,6 +130,8 @@ const queryParams = reactive({
   pageNum: 1,
   pageSize: 10
 })
+
+const router = useRouter()
 
 const detailVisible = ref(false)
 const detailLoading = ref(false)
@@ -281,6 +289,16 @@ const handleFinishOrder = async (order) => {
   } catch (error) {
     ElMessage.warning('完成订单失败，请稍后重试')
   }
+}
+
+const goChat = (orderId) => {
+  detailVisible.value = false
+  router.push(`/user/chat/${orderId}`)
+}
+
+const canShowChatEntry = (status) => {
+  const s = status?.toString()
+  return s === '3' || s === '4' || s === '5' || s === '6'
 }
 
 const handleCancelOrder = async (order) => {
