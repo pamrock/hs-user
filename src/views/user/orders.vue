@@ -35,7 +35,9 @@
           <div class="order-footer">
             <span class="price">实付: ¥ {{ order.totalAmount ?? 0 }}</span>
             <div class="actions">
-              <el-button size="small" round @click.stop="viewDetail(order.orderId || order.id)">查看详情</el-button>
+              <el-badge :value="unreadCounts[order.orderId || order.id]" :hidden="!unreadCounts[order.orderId || order.id]" class="view-detail-badge">
+                <el-button size="small" round @click.stop="viewDetail(order.orderId || order.id)">查看详情</el-button>
+              </el-badge>
               <el-button
                 v-if="isUnpaid(order.status)"
                 size="small"
@@ -95,11 +97,9 @@
           <el-descriptions-item label="下单时间">{{ currentOrder.createTime || '-' }}</el-descriptions-item>
         </el-descriptions>
         <div v-if="currentOrder && canShowChatEntry((currentDetail && currentDetail.status) || currentOrder.status)" style="text-align:center;margin-top:16px;">
-          <el-badge :value="unreadCounts[(currentDetail && currentDetail.orderId) || currentOrder.orderId || currentOrder.id]" :hidden="!unreadCounts[(currentDetail && currentDetail.orderId) || currentOrder.orderId || currentOrder.id]" class="chat-entry-badge">
-            <el-button type="primary" round style="width:80%;background:linear-gradient(135deg, #1e3c72, #2a5298);border:none;" @click="goChat((currentDetail && currentDetail.orderId) || currentOrder.orderId || currentOrder.id)">
-              联系服务人员
-            </el-button>
-          </el-badge>
+          <el-button type="primary" round style="width:80%;background:linear-gradient(135deg, #1e3c72, #2a5298);border:none;" @click="goChat((currentDetail && currentDetail.orderId) || currentOrder.orderId || currentOrder.id)">
+            联系服务人员
+          </el-button>
         </div>
       </div>
     </el-dialog>
@@ -498,11 +498,8 @@ onMounted(() => {
   margin-top: 8px;
 }
 
-.chat-entry-badge {
-  width: 100%;
-}
-.chat-entry-badge .el-button {
-  width: 100%;
+.view-detail-badge {
+  margin-right: 8px;
 }
 
 :deep(.order-detail-dialog .el-dialog) {
