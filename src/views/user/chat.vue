@@ -67,7 +67,7 @@ import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft, PictureFilled } from '@element-plus/icons-vue'
-import { connect, sendMessage, disconnect } from '@/utils/stomp'
+import { connect, sendMessage, disconnect, isConnected } from '@/utils/stomp'
 import { getMessages, markMessagesRead, canChat, uploadChatImage } from '@/api/message'
 import { getOrderDetail } from '@/api/order'
 import { getUserToken } from '@/utils/auth'
@@ -79,6 +79,7 @@ const messages = ref([])
 const inputText = ref('')
 const loading = ref(false)
 const canSend = ref(true)
+const wsConnected = ref(false)
 const chatDisabledReason = ref('')
 const msgListRef = ref(null)
 const imagePreviewVisible = ref(false)
@@ -158,6 +159,23 @@ const checkChatStatus = async () => {
 const handleSend = () => {
   const text = inputText.value.trim()
   if (!text) return
+  if (!isConnected()) {
+    ElMessage.warning('正在连接中，请稍后发送')
+    return
+  }
+  const optimisticId = Date.now()
+  const localMsg = {
+    id: optimisticId,
+    orderId: orderId.value,
+    senderId: 0,
+    senderRole: 'customer',
+    msgType: 'text',
+    content: text,
+    isRead: 1,
+    createTime: new Date().toISOString()
+  }
+  messages.value.push(localMsg)
+  scrollToBottom()
   sendMessage(orderId.value, {
     orderId: orderId.value,
     msgType: 'text',
@@ -207,7 +225,13 @@ const handleBack = () => {
 }
 
 const onMessage = (msg) => {
-  messages.value.push(msg)
+  // dedup: replace optimistic local message (id is Date.now timestamp > 1e12)
+  const idx = messages.value.findIndex(m => m.id > 1000000000000 && m.content === msg.content && m.senderRole === msg.senderRole)
+  if (idx >= 0) {
+    messages.value[idx] = msg
+  } else {
+    messages.value.push(msg)
+  }
   scrollToBottom()
 }
 
@@ -215,7 +239,9 @@ onMounted(async () => {
   await loadOrderInfo()
   await checkChatStatus()
   await loadHistory()
-  connect(token, orderId.value, onMessage)
+  connect(token, orderId.value, onMessage, () => {
+    wsConnected.value = true
+  })
 })
 
 onUnmounted(() => {
