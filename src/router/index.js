@@ -20,6 +20,12 @@ export const constantRoutes = [
     meta: { requiresAuth: false, title: '用户注册', hidden: true }
   },
   {
+    path: '/user/chat/:orderId',
+    name: 'UserChat',
+    component: () => import('@/views/user/chat.vue'),
+    meta: { title: '沟通', hidden: true }
+  },
+  {
     path: '/user',
     component: UserLayout,
     redirect: '/user/services',

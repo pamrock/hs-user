@@ -35,7 +35,9 @@
           <div class="order-footer">
             <span class="price">实付: ¥ {{ order.totalAmount ?? 0 }}</span>
             <div class="actions">
-              <el-button size="small" round @click.stop="viewDetail(order.orderId || order.id)">查看详情</el-button>
+              <el-badge :value="unreadCounts[order.orderId || order.id]" :hidden="!unreadCounts[order.orderId || order.id]" class="view-detail-badge">
+                <el-button size="small" round @click.stop="viewDetail(order.orderId || order.id)">查看详情</el-button>
+              </el-badge>
               <el-button
                 v-if="isUnpaid(order.status)"
                 size="small"
@@ -94,6 +96,13 @@
           </el-descriptions-item>
           <el-descriptions-item label="下单时间">{{ currentOrder.createTime || '-' }}</el-descriptions-item>
         </el-descriptions>
+        <div v-if="currentOrder && canShowChatEntry((currentDetail && currentDetail.status) || currentOrder.status)" style="text-align:center;margin-top:16px;">
+          <el-badge :value="unreadCounts[(currentDetail && currentDetail.orderId) || currentOrder.orderId || currentOrder.id]" :hidden="!unreadCounts[(currentDetail && currentDetail.orderId) || currentOrder.orderId || currentOrder.id]" class="chat-entry-badge">
+            <el-button type="primary" round style="width:80%;background:linear-gradient(135deg, #1e3c72, #2a5298);border:none;" @click="goChat((currentDetail && currentDetail.orderId) || currentOrder.orderId || currentOrder.id)">
+              联系服务人员
+            </el-button>
+          </el-badge>
+        </div>
       </div>
     </el-dialog>
   </div>
@@ -101,9 +110,12 @@
 
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { Picture } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { cancelOrder, finishService, getMyOrderList, getOrderDetail } from '@/api/order'
+import { batchUnreadCount } from '@/api/message'
+import { consumeReadOrderIds } from '@/utils/chat-state'
 import { alipayPay } from '@/api/pay'
 
 const tabs = [
@@ -125,10 +137,13 @@ const queryParams = reactive({
   pageSize: 10
 })
 
+const router = useRouter()
+
 const detailVisible = ref(false)
 const detailLoading = ref(false)
 const currentDetail = ref(null)
 const currentOrder = ref(null)
+const unreadCounts = ref({})
 
 const fetchList = async () => {
   loading.value = true
@@ -147,6 +162,27 @@ const fetchList = async () => {
     ElMessage.error('网络异常，订单列表加载失败')
   } finally {
     loading.value = false
+  }
+  loadUnreadCounts()
+}
+
+const loadUnreadCounts = async () => {
+  const ids = orderList.value.map(o => o.orderId || o.id).filter(Boolean)
+
+  // 立即清除从聊天页带回来的已读标记
+  const readIds = consumeReadOrderIds()
+  for (const id of readIds) {
+    unreadCounts.value = { ...unreadCounts.value, [id]: 0 }
+  }
+
+  if (ids.length === 0) return
+  try {
+    const res = await batchUnreadCount(ids)
+    if (res.data) {
+      unreadCounts.value = res.data
+    }
+  } catch (e) {
+    // non-critical
   }
 }
 
@@ -281,6 +317,16 @@ const handleFinishOrder = async (order) => {
   } catch (error) {
     ElMessage.warning('完成订单失败，请稍后重试')
   }
+}
+
+const goChat = (orderId) => {
+  detailVisible.value = false
+  router.push(`/user/chat/${orderId}`)
+}
+
+const canShowChatEntry = (status) => {
+  const s = status?.toString()
+  return s === '3' || s === '4' || s === '5' || s === '6'
 }
 
 const handleCancelOrder = async (order) => {
@@ -460,6 +506,13 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   margin-top: 8px;
+}
+
+.view-detail-badge {
+  margin-right: 8px;
+}
+.chat-entry-badge {
+  width: 80%;
 }
 
 :deep(.order-detail-dialog .el-dialog) {
