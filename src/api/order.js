@@ -50,9 +50,9 @@ export function submitOrderRating(data) {
   return request.post('/order/rating/submit', data)
 }
 
-// 取消订单
-export function cancelOrder(data) {
-  return request.post('/order/cancel', data)
+// 退款取消订单
+export function refundOrder(data) {
+  return request.post('/order/refund', data)
 }
 
 // 获取可用服务日期和时段
