@@ -66,6 +66,18 @@
               >
                 取消订单
               </el-button>
+              <el-button
+                v-if="isCompleted(order.status) && !hasRating(order)"
+                size="small"
+                type="warning"
+                round
+                @click.stop="openRatingDialog(order)"
+              >
+                评价服务
+              </el-button>
+              <span v-if="isCompleted(order.status) && hasRating(order)" class="rating-done">
+                已评价 {{ getRatingScore(order) }} 分
+              </span>
             </div>
           </div>
         </div>
@@ -103,7 +115,38 @@
             </el-button>
           </el-badge>
         </div>
+        <div v-if="currentOrder && isCompleted((currentDetail && currentDetail.status) || currentOrder.status)" class="rating-panel">
+          <template v-if="hasRating(currentDetail || currentOrder)">
+            <div class="rating-panel-title">我的评价</div>
+            <el-rate :model-value="Number(getRatingScore(currentDetail || currentOrder))" disabled show-score />
+            <div class="rating-comment">{{ getRatingComment(currentDetail || currentOrder) || '暂无文字评价' }}</div>
+          </template>
+          <template v-else>
+            <el-button type="warning" round class="rating-entry-btn" @click="openRatingDialog(currentDetail || currentOrder)">
+              评价服务
+            </el-button>
+          </template>
+        </div>
       </div>
+    </el-dialog>
+
+    <el-dialog v-model="ratingVisible" title="评价服务" width="92%" class="rating-dialog">
+      <div class="rating-form">
+        <div class="rating-target">订单号：{{ ratingOrder?.orderId || ratingOrder?.id || '-' }}</div>
+        <el-rate v-model="ratingForm.score" :max="5" show-score />
+        <el-input
+          v-model="ratingForm.comment"
+          type="textarea"
+          :rows="4"
+          maxlength="500"
+          show-word-limit
+          placeholder="请输入对服务人员的评价（选填）"
+        />
+      </div>
+      <template #footer>
+        <el-button @click="ratingVisible = false">取消</el-button>
+        <el-button type="primary" :loading="ratingSubmitting" @click="submitRating">提交评价</el-button>
+      </template>
     </el-dialog>
   </div>
 </template>
@@ -113,7 +156,7 @@ import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Picture } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { cancelOrder, finishService, getMyOrderList, getOrderDetail } from '@/api/order'
+import { cancelOrder, finishService, getMyOrderList, getOrderDetail, submitOrderRating } from '@/api/order'
 import { batchUnreadCount } from '@/api/message'
 import { consumeReadOrderIds } from '@/utils/chat-state'
 import { alipayPay } from '@/api/pay'
@@ -144,6 +187,13 @@ const detailLoading = ref(false)
 const currentDetail = ref(null)
 const currentOrder = ref(null)
 const unreadCounts = ref({})
+const ratingVisible = ref(false)
+const ratingSubmitting = ref(false)
+const ratingOrder = ref(null)
+const ratingForm = reactive({
+  score: 5,
+  comment: ''
+})
 
 const fetchList = async () => {
   loading.value = true
@@ -199,6 +249,10 @@ const handleCurrentChange = (value) => {
 
 const isUnpaid = (status) => status?.toString() === '1'
 const isInService = (status) => status?.toString() === '4'
+const isCompleted = (status) => status?.toString() === '5'
+const hasRating = (order) => Boolean(order?.rated || order?.ratingScore)
+const getRatingScore = (order) => order?.ratingScore ?? '-'
+const getRatingComment = (order) => order?.ratingComment || ''
 
 const getStatusType = (status) => {
   const s = status?.toString()
@@ -311,6 +365,7 @@ const handleFinishOrder = async (order) => {
     }
     ElMessage.success('订单已完成')
     await fetchList()
+    openRatingDialog({ ...order, status: '5', orderId })
     if (detailVisible.value && (currentOrder.value?.orderId || currentOrder.value?.id) === orderId) {
       await viewDetail(orderId)
     }
@@ -348,6 +403,52 @@ const handleCancelOrder = async (order) => {
     }
   } catch (error) {
     ElMessage.warning('取消订单失败，请稍后重试')
+  }
+}
+
+const openRatingDialog = (order) => {
+  const orderId = order?.orderId || order?.id
+  if (!orderId) {
+    ElMessage.warning('订单号不存在，无法评价')
+    return
+  }
+  ratingOrder.value = { ...order, orderId }
+  ratingForm.score = 5
+  ratingForm.comment = ''
+  ratingVisible.value = true
+}
+
+const submitRating = async () => {
+  const orderId = ratingOrder.value?.orderId || ratingOrder.value?.id
+  if (!orderId) {
+    ElMessage.warning('订单号不存在，无法评价')
+    return
+  }
+  if (!ratingForm.score) {
+    ElMessage.warning('请选择评分')
+    return
+  }
+  ratingSubmitting.value = true
+  try {
+    const res = await submitOrderRating({
+      orderId,
+      score: ratingForm.score,
+      comment: ratingForm.comment
+    })
+    if (!res?.success) {
+      ElMessage.warning(res?.msg || '评价提交失败，请稍后重试')
+      return
+    }
+    ElMessage.success('评价提交成功')
+    ratingVisible.value = false
+    await fetchList()
+    if (detailVisible.value && (currentOrder.value?.orderId || currentOrder.value?.id) === orderId) {
+      await viewDetail(orderId)
+    }
+  } catch (error) {
+    ElMessage.warning('评价提交失败，请稍后重试')
+  } finally {
+    ratingSubmitting.value = false
   }
 }
 
@@ -511,11 +612,60 @@ onMounted(() => {
 .view-detail-badge {
   margin-right: 8px;
 }
+
+.rating-done {
+  color: #e6a23c;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.rating-panel {
+  margin-top: 16px;
+  padding: 12px;
+  background: #fff7e8;
+  border-radius: 10px;
+}
+
+.rating-panel-title {
+  margin-bottom: 8px;
+  color: #1f2329;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.rating-comment {
+  margin-top: 8px;
+  color: #646f83;
+  font-size: 13px;
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.rating-entry-btn {
+  width: 100%;
+}
+
+.rating-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.rating-target {
+  color: #646f83;
+  font-size: 13px;
+}
+
 .chat-entry-badge {
   width: 80%;
 }
 
 :deep(.order-detail-dialog .el-dialog) {
+  max-width: 420px;
+  border-radius: 12px;
+}
+
+:deep(.rating-dialog .el-dialog) {
   max-width: 420px;
   border-radius: 12px;
 }

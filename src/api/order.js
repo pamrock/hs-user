@@ -45,6 +45,11 @@ export function finishService(data) {
   return request.post('/order/finishService', data)
 }
 
+// 提交订单评价
+export function submitOrderRating(data) {
+  return request.post('/order/rating/submit', data)
+}
+
 // 取消订单
 export function cancelOrder(data) {
   return request.post('/order/cancel', data)
