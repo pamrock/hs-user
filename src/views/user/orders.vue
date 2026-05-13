@@ -58,7 +58,7 @@
                 完成订单
               </el-button>
               <el-button
-                v-if="isInService(order.status)"
+                v-if="isPendingOrDispatched(order.status)"
                 size="small"
                 type="danger"
                 round
@@ -156,7 +156,7 @@ import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Picture } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { cancelOrder, finishService, getMyOrderList, getOrderDetail, submitOrderRating } from '@/api/order'
+import { refundOrder, finishService, getMyOrderList, getOrderDetail, submitOrderRating } from '@/api/order'
 import { batchUnreadCount } from '@/api/message'
 import { consumeReadOrderIds } from '@/utils/chat-state'
 import { alipayPay } from '@/api/pay'
@@ -249,6 +249,10 @@ const handleCurrentChange = (value) => {
 
 const isUnpaid = (status) => status?.toString() === '1'
 const isInService = (status) => status?.toString() === '4'
+const isPendingOrDispatched = (status) => {
+  const s = status?.toString()
+  return s === '2' || s === '3'
+}
 const isCompleted = (status) => status?.toString() === '5'
 const hasRating = (order) => Boolean(order?.rated || order?.ratingScore)
 const getRatingScore = (order) => order?.ratingScore ?? '-'
@@ -391,18 +395,25 @@ const handleCancelOrder = async (order) => {
     return
   }
   try {
-    const res = await cancelOrder({ orderId, role: 2 })
+    await ElMessageBox.confirm(
+      '确认取消订单吗？\n取消后系统将自动退款，金额将原路返回您的支付账户。',
+      '提示',
+      { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
+    )
+    const res = await refundOrder({ orderId })
     if (!res?.success) {
       ElMessage.warning(res?.msg || '取消订单失败，请稍后重试')
       return
     }
-    ElMessage.success('订单已取消')
+    ElMessage.success('订单已取消，退款将原路返回')
     await fetchList()
     if (detailVisible.value && (currentOrder.value?.orderId || currentOrder.value?.id) === orderId) {
       await viewDetail(orderId)
     }
   } catch (error) {
-    ElMessage.warning('取消订单失败，请稍后重试')
+    if (error !== 'cancel') {
+      ElMessage.warning('取消订单失败，请稍后重试')
+    }
   }
 }
 
