@@ -9,7 +9,13 @@
         <el-empty v-if="!loading && !serviceList.length" description="暂无服务项目" />
         <div v-for="item in serviceList" :key="item.id" class="service-card" @click="openDetail(item)">
           <div class="card-cover">
-            <el-icon :size="34" color="#91a3b0"><Picture /></el-icon>
+            <img
+              v-if="item.imageUrl"
+              :src="item.imageUrl"
+              class="cover-img"
+              @error="e => e.target.style.display = 'none'"
+            />
+            <el-icon v-else :size="34" color="#91a3b0"><Picture /></el-icon>
           </div>
           <div class="card-main">
             <h3>{{ item.itemName }}</h3>
@@ -577,6 +583,14 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px;
 }
 
 .card-main {
