@@ -12,10 +12,12 @@
             <img
               v-if="item.imageUrl"
               :src="item.imageUrl"
+              :alt="item.itemName || '服务项目'"
               class="cover-img"
-              @error="e => e.target.style.display = 'none'"
+              loading="lazy"
+              @error="item.imageUrl = null"
             />
-            <el-icon v-else :size="34" color="#91a3b0"><Picture /></el-icon>
+            <el-icon v-if="!item.imageUrl" :size="34" color="#91a3b0"><Picture /></el-icon>
           </div>
           <div class="card-main">
             <h3>{{ item.itemName }}</h3>
