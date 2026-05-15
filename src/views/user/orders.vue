@@ -25,7 +25,15 @@
           </div>
           <div class="order-content">
             <div class="order-img">
-              <el-icon :size="28" color="#c0c4cc"><Picture /></el-icon>
+              <img
+                v-if="order.serviceItemImageUrl"
+                :src="order.serviceItemImageUrl"
+                :alt="order.serviceItem || '服务项目'"
+                class="order-cover-img"
+                loading="lazy"
+                @error="order.serviceItemImageUrl = null"
+              />
+              <el-icon v-if="!order.serviceItemImageUrl" :size="28" color="#c0c4cc"><Picture /></el-icon>
             </div>
             <div class="order-info">
               <h4>{{ order.serviceItem || '服务项目' }}</h4>
@@ -573,6 +581,13 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+}
+
+.order-cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .order-info {
