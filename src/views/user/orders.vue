@@ -483,26 +483,29 @@ const submitRating = async () => {
 const startPolling = (orderId) => {
   if (pollingTimers[orderId]) return
   let count = 0
-  pollingTimers[orderId] = setInterval(async () => {
+  const poll = async () => {
     if (count++ >= POLL_MAX) {
       stopPolling(orderId)
       return
     }
     try {
       const res = await queryPaymentStatus({ orderId })
-      if (res.data !== '1') {
+      if (!isUnpaid(res.data)) {
         stopPolling(orderId)
         await fetchList()
+        return
       }
     } catch (e) {
       // 轮询失败不影响 UI，继续尝试
     }
-  }, POLL_INTERVAL)
+    pollingTimers[orderId] = setTimeout(poll, POLL_INTERVAL)
+  }
+  pollingTimers[orderId] = setTimeout(poll, POLL_INTERVAL)
 }
 
 const stopPolling = (orderId) => {
   if (pollingTimers[orderId]) {
-    clearInterval(pollingTimers[orderId])
+    clearTimeout(pollingTimers[orderId])
     delete pollingTimers[orderId]
   }
 }
