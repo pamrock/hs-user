@@ -160,14 +160,14 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Picture } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { refundOrder, finishService, getMyOrderList, getOrderDetail, submitOrderRating } from '@/api/order'
 import { batchUnreadCount } from '@/api/message'
 import { consumeReadOrderIds } from '@/utils/chat-state'
-import { alipayPay } from '@/api/pay'
+import { alipayPay, queryPaymentStatus } from '@/api/pay'
 
 const tabs = [
   { label: '全部', value: 'all' },
@@ -203,6 +203,10 @@ const ratingForm = reactive({
   comment: ''
 })
 
+const POLL_INTERVAL = 3000
+const POLL_MAX = 20
+const pollingTimers = {}
+
 const fetchList = async () => {
   loading.value = true
   try {
@@ -222,6 +226,11 @@ const fetchList = async () => {
     loading.value = false
   }
   loadUnreadCounts()
+  orderList.value.forEach(order => {
+    if (isUnpaid(order.status) && !pollingTimers[order.orderId || order.id]) {
+      startPolling(order.orderId || order.id)
+    }
+  })
 }
 
 const loadUnreadCounts = async () => {
@@ -471,8 +480,43 @@ const submitRating = async () => {
   }
 }
 
+const startPolling = (orderId) => {
+  if (pollingTimers[orderId]) return
+  let count = 0
+  pollingTimers[orderId] = setInterval(async () => {
+    if (count++ >= POLL_MAX) {
+      stopPolling(orderId)
+      return
+    }
+    try {
+      const res = await queryPaymentStatus({ orderId })
+      if (res.data !== '1') {
+        stopPolling(orderId)
+        await fetchList()
+      }
+    } catch (e) {
+      // 轮询失败不影响 UI，继续尝试
+    }
+  }, POLL_INTERVAL)
+}
+
+const stopPolling = (orderId) => {
+  if (pollingTimers[orderId]) {
+    clearInterval(pollingTimers[orderId])
+    delete pollingTimers[orderId]
+  }
+}
+
+const stopAllPolling = () => {
+  Object.keys(pollingTimers).forEach(stopPolling)
+}
+
 onMounted(() => {
   fetchList()
+})
+
+onUnmounted(() => {
+  stopAllPolling()
 })
 </script>
 
