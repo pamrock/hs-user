@@ -150,14 +150,15 @@ const handleLogin = async () => {
 
   try {
     loading.value = true
-    const { data } = await login({
+    const data = await login({
       username: loginForm.username,
       password: loginForm.password,
       captchaId: captchaId.value,
       captchaCode: loginForm.captcha
     })
+    console.log(data)
     if (data.success) {
-      const token = data.token
+      const token = data.data.token
       localStorage.setItem('user_token', token)
       saveRemembered()
       ElMessage.success('登录成功')
