@@ -156,11 +156,15 @@ const handleLogin = async () => {
       captchaId: captchaId.value,
       captchaCode: loginForm.captcha
     })
-    const token = data.token
-    localStorage.setItem('user_token', token)
-    saveRemembered()
-    ElMessage.success('登录成功')
-    router.push('/user/services')
+    if (data.success) {
+      const token = data.token
+      localStorage.setItem('user_token', token)
+      saveRemembered()
+      ElMessage.success('登录成功')
+      router.push('/user/services')
+    } else {
+      ElMessage.error(data.msg || '登录失败')
+    }
   } catch (error) {
     console.error('登录失败:', error)
   } finally {
