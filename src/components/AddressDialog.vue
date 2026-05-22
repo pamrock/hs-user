@@ -3,7 +3,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { addCustomerAddress, updateCustomerAddress, getCustomerAddressList } from '@/api/customer'
 import { regionData } from 'element-china-area-data'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, ArrowRight } from '@element-plus/icons-vue'
 
 const props = defineProps({
   customerId: {
@@ -31,6 +31,24 @@ const tableData = ref([])
 const dialogVisible = ref(false)
 const dialogTitle = ref('新增地址')
 const addressFormRef = ref(null)
+const showRegionDrawer = ref(false)
+const selectedProvince = ref('')
+const selectedCity = ref('')
+const selectedDistrict = ref('')
+const selectedRegionText = ref('')
+
+const currentCities = computed(() => {
+  if (!selectedProvince.value) return []
+  const p = regionData.find(item => item.value === selectedProvince.value)
+  return p?.children || []
+})
+
+const currentDistricts = computed(() => {
+  if (!selectedProvince.value || !selectedCity.value) return []
+  const p = regionData.find(item => item.value === selectedProvince.value)
+  const c = p?.children?.find(item => item.value === selectedCity.value)
+  return c?.children || []
+})
 
 const addressForm = reactive({
   id: null,
@@ -105,6 +123,56 @@ const formatRegion = (province, city, district) => {
   return text
 }
 
+// 地区选择器辅助函数
+const getProvinceLabel = (code) => {
+  const item = regionData.find(p => p.value === code)
+  return item?.label || ''
+}
+const getCityLabel = (provinceCode, cityCode) => {
+  const p = regionData.find(item => item.value === provinceCode)
+  const c = p?.children?.find(item => item.value === cityCode)
+  return c?.label || ''
+}
+const getDistrictLabel = (provinceCode, cityCode, districtCode) => {
+  const p = regionData.find(item => item.value === provinceCode)
+  const c = p?.children?.find(item => item.value === cityCode)
+  const d = c?.children?.find(item => item.value === districtCode)
+  return d?.label || ''
+}
+
+const selectProvince = (item) => {
+  selectedProvince.value = item.value
+  selectedCity.value = ''
+  selectedDistrict.value = ''
+}
+
+const selectCity = (item) => {
+  selectedCity.value = item.value
+  selectedDistrict.value = ''
+}
+
+const selectDistrict = (item) => {
+  selectedDistrict.value = item.value
+}
+
+const goBackToProvince = () => {
+  selectedCity.value = ''
+  selectedDistrict.value = ''
+}
+
+const goBackToCity = () => {
+  selectedDistrict.value = ''
+}
+
+const confirmRegion = () => {
+  addressForm.areaCode = [selectedProvince.value, selectedCity.value, selectedDistrict.value]
+  const text = getProvinceLabel(selectedProvince.value) + ' ' +
+               getCityLabel(selectedProvince.value, selectedCity.value) + ' ' +
+               getDistrictLabel(selectedProvince.value, selectedCity.value, selectedDistrict.value)
+  selectedRegionText.value = text
+  showRegionDrawer.value = false
+}
+
 // 监听visible变化
 watch(() => props.visible, (val) => {
   if (val) {
@@ -151,6 +219,10 @@ const handleAdd = () => {
     detailAddress: '',
     isDefault: 0
   })
+  selectedProvince.value = ''
+  selectedCity.value = ''
+  selectedDistrict.value = ''
+  selectedRegionText.value = ''
   dialogVisible.value = true
 }
 
@@ -162,6 +234,17 @@ const handleEdit = (row) => {
     ...row,
     areaCode: areaCode
   })
+  if (row.province && row.city && row.district) {
+    selectedProvince.value = row.province
+    selectedCity.value = row.city
+    selectedDistrict.value = row.district
+    selectedRegionText.value = getAreaText(row.province, row.city, row.district)
+  } else {
+    selectedProvince.value = ''
+    selectedCity.value = ''
+    selectedDistrict.value = ''
+    selectedRegionText.value = ''
+  }
   dialogVisible.value = true
 }
 
@@ -326,15 +409,80 @@ const handleSelect = (item) => {
           <el-input v-model="addressForm.contactPhone" placeholder="请输入联系电话" />
         </el-form-item>
         <el-form-item label="所在地区" prop="areaCode">
-          <el-cascader
-            v-model="addressForm.areaCode"
-            :options="regionData"
-            placeholder="请选择所在地区"
-            style="width: 100%"
-            clearable
-            filterable
-          />
+          <div class="region-selector" @click="showRegionDrawer = true">
+            <span v-if="selectedRegionText" class="region-text">{{ selectedRegionText }}</span>
+            <span v-else class="region-placeholder">请选择所在地区</span>
+            <el-icon><ArrowRight /></el-icon>
+          </div>
         </el-form-item>
+
+        <!-- 地区选择底部弹出 -->
+        <el-drawer
+          v-model="showRegionDrawer"
+          :append-to-body="true"
+          direction="btt"
+          size="60%"
+          :close-on-click-modal="true"
+          title="选择所在地区"
+        >
+          <div class="region-picker">
+            <div class="region-breadcrumb" v-if="selectedProvince">
+              <span class="breadcrumb-item" @click="goBackToProvince" :class="{ active: !selectedCity }">
+                {{ getProvinceLabel(selectedProvince) }}
+              </span>
+              <template v-if="selectedCity">
+                <el-icon><ArrowRight /></el-icon>
+                <span class="breadcrumb-item" @click="goBackToCity" :class="{ active: !selectedDistrict }">
+                  {{ getCityLabel(selectedProvince, selectedCity) }}
+                </span>
+              </template>
+              <template v-if="selectedDistrict">
+                <el-icon><ArrowRight /></el-icon>
+                <span class="breadcrumb-item active">
+                  {{ getDistrictLabel(selectedProvince, selectedCity, selectedDistrict) }}
+                </span>
+              </template>
+            </div>
+
+            <!-- 省份列表 -->
+            <div class="region-list" v-if="!selectedProvince">
+              <div
+                v-for="p in regionData"
+                :key="p.value"
+                class="region-item"
+                :class="{ selected: selectedProvince === p.value }"
+                @click="selectProvince(p)"
+              >{{ p.label }}</div>
+            </div>
+
+            <!-- 城市列表 -->
+            <div class="region-list" v-if="selectedProvince && !selectedCity">
+              <div
+                v-for="c in currentCities"
+                :key="c.value"
+                class="region-item"
+                :class="{ selected: selectedCity === c.value }"
+                @click="selectCity(c)"
+              >{{ c.label }}</div>
+            </div>
+
+            <!-- 区县列表 -->
+            <div class="region-list" v-if="selectedProvince && selectedCity && !selectedDistrict">
+              <div
+                v-for="d in currentDistricts"
+                :key="d.value"
+                class="region-item"
+                :class="{ selected: selectedDistrict === d.value }"
+                @click="selectDistrict(d)"
+              >{{ d.label }}</div>
+            </div>
+
+            <!-- 确认按钮 -->
+            <div class="region-confirm" v-if="selectedProvince && selectedCity && selectedDistrict">
+              <el-button type="primary" round class="confirm-btn" @click="confirmRegion">确认选择</el-button>
+            </div>
+          </div>
+        </el-drawer>
         <el-form-item label="详细地址" prop="detailAddress">
           <el-input 
             v-model="addressForm.detailAddress" 
@@ -462,4 +610,70 @@ const handleSelect = (item) => {
     grid-template-columns: 1fr;
   }
 }
+
+.region-selector {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  cursor: pointer;
+  min-height: 32px;
+}
+.region-text { color: #303133; font-size: 14px; }
+.region-placeholder { color: #c0c4cc; font-size: 14px; }
+
+.region-picker {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.region-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 16px;
+  font-size: 13px;
+  color: #666;
+  border-bottom: 1px solid #f0f0f0;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.breadcrumb-item {
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+.breadcrumb-item.active { color: #1989fa; font-weight: 500; }
+.region-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+.region-item {
+  padding: 12px 20px;
+  font-size: 15px;
+  color: #333;
+  cursor: pointer;
+  border-bottom: 1px solid #f8f8f8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.region-item.selected {
+  color: #1989fa;
+  background: #f0f7ff;
+}
+.region-item.selected::after {
+  content: '\2713';
+  color: #1989fa;
+  font-size: 16px;
+}
+.region-confirm {
+  padding: 12px 20px;
+  flex-shrink: 0;
+  border-top: 1px solid #f0f0f0;
+}
+.confirm-btn { width: 100%; }
 </style>
