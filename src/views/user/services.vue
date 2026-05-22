@@ -70,7 +70,10 @@
 
       <div class="detail-body">
         <div class="hero-card">
-          <div class="hero-icon">{{ currentItem.itemName?.slice(0, 1) || '服' }}</div>
+          <div class="hero-icon">
+            <img v-if="currentItem.imageUrl" :src="currentItem.imageUrl" :alt="currentItem.itemName" class="hero-img" />
+            <span v-else>{{ currentItem.itemName?.slice(0, 1) || '服' }}</span>
+          </div>
           <div class="hero-info">
             <div class="hero-price">¥{{ Number(currentItem.price || 0).toFixed(2) }}</div>
             <div class="hero-name">{{ currentItem.itemName }}</div>
@@ -395,7 +398,7 @@ const loadServiceList = async () => {
 
 const loadCategoryList = async () => {
   try {
-    const res = await getCategoryList()
+    const res = await getCategoryList({})
     const data = res?.data || res || []
     categoryList.value = Array.isArray(data) ? data : []
   } catch (e) {
@@ -756,6 +759,12 @@ onMounted(() => {
   justify-content: center;
   font-size: 24px;
   font-weight: 600;
+  overflow: hidden;
+}
+.hero-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .hero-price {
