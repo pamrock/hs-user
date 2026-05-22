@@ -156,6 +156,7 @@ const selectDistrict = (item) => {
 }
 
 const goBackToProvince = () => {
+  selectedProvince.value = ''
   selectedCity.value = ''
   selectedDistrict.value = ''
 }
