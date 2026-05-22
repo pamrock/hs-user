@@ -5,6 +5,34 @@
         <h2>服务项目</h2>
       </div>
 
+      <!-- 搜索栏 -->
+      <div class="search-bar">
+        <div class="search-input-wrap">
+          <el-icon class="search-icon"><Search /></el-icon>
+          <input
+            v-model="searchKeyword"
+            class="search-input"
+            placeholder="搜索服务名称"
+            @keyup.enter="handleSearch"
+          />
+          <el-icon v-if="searchKeyword" class="clear-icon" @click="handleClearSearch"><CircleClose /></el-icon>
+        </div>
+        <el-button class="search-btn" type="primary" size="small" round @click="handleSearch">搜索</el-button>
+      </div>
+
+      <!-- 分类标签栏 -->
+      <div class="category-tabs" v-if="categoryList.length">
+        <div class="tabs-scroll">
+          <div
+            v-for="cat in categoryList"
+            :key="cat.categoryCode"
+            class="tab-chip"
+            :class="{ active: selectedCategory === cat.categoryCode }"
+            @click="handleCategoryChange(cat.categoryCode)"
+          >{{ cat.categoryName }}</div>
+        </div>
+      </div>
+
       <div v-loading="loading" class="service-list">
         <el-empty v-if="!loading && !serviceList.length" description="暂无服务项目" />
         <div v-for="item in serviceList" :key="item.id" class="service-card" @click="openDetail(item)">
@@ -229,8 +257,9 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft, ArrowRight, Check, Location, Picture, User } from '@element-plus/icons-vue'
+import { ArrowLeft, ArrowRight, Check, Location, Picture, Search, CircleClose, User } from '@element-plus/icons-vue'
 import { regionData } from 'element-china-area-data'
+import { getCategoryList } from '@/api/category'
 import { getItemList } from '@/api/item'
 import { getUserInfo } from '@/api/user'
 import { getCustomerAddressList } from '@/api/customer'
@@ -239,6 +268,9 @@ import { addOrder, getAvailableSlots } from '@/api/order'
 import { alipayPay } from '@/api/pay'
 
 const loading = ref(false)
+const categoryList = ref([])
+const selectedCategory = ref('')
+const searchKeyword = ref('')
 const submitting = ref(false)
 const serviceList = ref([])
 const currentItem = ref(null)
@@ -343,21 +375,54 @@ const resetOrderForm = () => {
 const loadServiceList = async () => {
   loading.value = true
   try {
-    const res = await getItemList({
-      pageNo: 1,
-      pageSize: 100,
-      status: 0
-    })
-    if (res.success) {
-      serviceList.value = res.data?.records || []
-    } else {
-      ElMessage.error(res.msg || '加载服务项目失败')
+    const params = { pageNo: 1, pageSize: 100, status: 0 }
+    if (selectedCategory.value) {
+      params.categoryCodes = [selectedCategory.value]
     }
-  } catch (error) {
-    ElMessage.error('加载服务项目失败')
+    if (searchKeyword.value.trim()) {
+      params.itemName = searchKeyword.value.trim()
+    }
+    const res = await getItemList(params)
+    const data = res?.data || res
+    serviceList.value = data?.records || data?.list || (Array.isArray(data) ? data : [])
+  } catch (e) {
+    serviceList.value = []
+    console.error('加载服务列表失败', e)
   } finally {
     loading.value = false
   }
+}
+
+const loadCategoryList = async () => {
+  try {
+    const res = await getCategoryList()
+    const data = res?.data || res || []
+    categoryList.value = Array.isArray(data) ? data : []
+  } catch (e) {
+    console.error('加载分类失败', e)
+  }
+}
+
+const handleCategoryChange = (code) => {
+  if (selectedCategory.value === code) {
+    selectedCategory.value = ''
+  } else {
+    selectedCategory.value = code
+    searchKeyword.value = ''
+  }
+  loadServiceList()
+}
+
+const handleSearch = () => {
+  if (searchKeyword.value.trim()) {
+    selectedCategory.value = ''
+  }
+  loadServiceList()
+}
+
+const handleClearSearch = () => {
+  searchKeyword.value = ''
+  loadServiceList()
 }
 
 const ensureCurrentUser = async () => {
@@ -533,6 +598,7 @@ const handleSubmitOrder = async () => {
 }
 
 onMounted(() => {
+  loadCategoryList()
   loadServiceList()
   ensureCurrentUser()
 })
@@ -884,4 +950,42 @@ onMounted(() => {
   border-top-right-radius: 16px;
   will-change: transform;
 }
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #fff;
+  margin-bottom: 4px;
+}
+.search-input-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: #f5f6f8;
+  border-radius: 20px;
+  padding: 6px 14px;
+}
+.search-icon { color: #999; font-size: 16px; margin-right: 6px; flex-shrink: 0; }
+.search-input {
+  flex: 1; border: none; outline: none; background: transparent;
+  font-size: 14px; color: #333; line-height: 24px;
+}
+.search-input::placeholder { color: #bbb; }
+.clear-icon { color: #ccc; font-size: 16px; cursor: pointer; flex-shrink: 0; }
+.search-btn { flex-shrink: 0; height: 32px; padding: 0 16px; font-size: 13px; }
+
+.category-tabs { background: #fff; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+.tabs-scroll {
+  display: flex; overflow-x: auto; padding: 0 16px; gap: 10px;
+  -webkit-overflow-scrolling: touch;
+}
+.tabs-scroll::-webkit-scrollbar { display: none; }
+.tab-chip {
+  flex-shrink: 0; padding: 5px 14px; border-radius: 16px;
+  font-size: 13px; color: #666; background: #f5f6f8;
+  white-space: nowrap; cursor: pointer; transition: all 0.2s;
+}
+.tab-chip.active { color: #1989fa; background: #e8f4ff; font-weight: 500; }
 </style>
