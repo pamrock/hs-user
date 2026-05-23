@@ -199,7 +199,7 @@ const handleRegister = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 .auth-bg {
