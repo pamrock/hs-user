@@ -164,7 +164,7 @@
               <div class="picker-title">{{ address.contactName }} {{ address.contactPhone }}</div>
               <div class="picker-desc">{{ formatAddress(address) }}</div>
             </div>
-            <el-icon v-if="selectedAddress?.id === address.id" color="#07c160"><Check /></el-icon>
+            <el-icon v-if="selectedAddress?.id === address.id" color="var(--app-primary)"><Check /></el-icon>
           </div>
         </div>
         <el-empty v-else description="暂无地址，请先在地址管理中新增" />
@@ -186,7 +186,7 @@
               <div class="picker-title">{{ employee.realName }}</div>
               <div class="picker-desc">手机号 {{ employee.phone || '-' }} · 评分 {{ employee.starRating || '-' }}</div>
             </div>
-            <el-icon v-if="orderForm.employeeId === employee.id" color="#07c160"><Check /></el-icon>
+            <el-icon v-if="orderForm.employeeId === employee.id" color="var(--app-primary)"><Check /></el-icon>
           </div>
         </div>
         <el-empty v-else description="暂无可选服务人员" />
@@ -209,7 +209,7 @@
               <div class="picker-title">{{ date.label }}</div>
               <div v-if="date.disabled" class="picker-desc">暂无可选时段</div>
             </div>
-            <el-icon v-if="orderForm.serviceDate === date.value" color="#07c160"><Check /></el-icon>
+            <el-icon v-if="orderForm.serviceDate === date.value" color="var(--app-primary)"><Check /></el-icon>
           </div>
         </div>
       </div>
@@ -229,7 +229,7 @@
             <div class="picker-main">
               <div class="picker-title">{{ option.label }}</div>
             </div>
-            <el-icon v-if="orderForm.visitTimeRange === option.value" color="#07c160"><Check /></el-icon>
+            <el-icon v-if="orderForm.visitTimeRange === option.value" color="var(--app-primary)"><Check /></el-icon>
           </div>
         </div>
       </div>
@@ -249,7 +249,7 @@
             <div class="picker-main">
               <div class="picker-title">{{ option.label }}</div>
             </div>
-            <el-icon v-if="orderForm.serviceTimeRange === option.value" color="#07c160"><Check /></el-icon>
+            <el-icon v-if="orderForm.serviceTimeRange === option.value" color="var(--app-primary)"><Check /></el-icon>
           </div>
         </div>
       </div>
@@ -621,15 +621,15 @@ onMounted(() => {
 
 <style scoped>
 .wechat-page {
-  background: #f5f5f5;
-  min-height: calc(100vh - 84px);
+  background: var(--app-bg);
+  min-height: calc(100dvh - var(--tab-bar-height));
 }
 
 .wechat-header {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: #fff;
+  background: var(--app-bg-white);
   padding: 14px 16px;
   box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
 }
@@ -650,8 +650,8 @@ onMounted(() => {
 .service-card {
   display: flex;
   gap: 12px;
-  border-radius: 12px;
-  background: #fff;
+  border-radius: var(--radius-md);
+  background: var(--app-bg-white);
   padding: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   cursor: pointer;
@@ -683,12 +683,12 @@ onMounted(() => {
 .card-main h3 {
   margin: 2px 0 4px;
   font-size: 16px;
-  color: #1f2329;
+  color: var(--app-text-primary);
 }
 
 .card-main p {
   margin: 0;
-  color: #7c8698;
+  color: var(--app-text-muted);
   font-size: 12px;
   line-height: 1.4;
   display: -webkit-box;
@@ -711,12 +711,12 @@ onMounted(() => {
 }
 
 .go-detail {
-  color: #07c160;
+  color: var(--app-primary);
   font-size: 13px;
 }
 
 .detail-page {
-  min-height: calc(100vh - 84px);
+  min-height: calc(100dvh - var(--tab-bar-height));
   display: flex;
   flex-direction: column;
 }
@@ -725,12 +725,12 @@ onMounted(() => {
   position: sticky;
   top: 0;
   z-index: 12;
-  background: #fff;
+  background: var(--app-bg-white);
   padding: 10px 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--app-border-light);
 }
 
 .detail-header h3 {
@@ -742,7 +742,7 @@ onMounted(() => {
 .back-btn {
   position: absolute;
   left: 6px;
-  color: #333;
+  color: var(--app-text-primary);
 }
 
 .detail-body {
@@ -753,8 +753,8 @@ onMounted(() => {
 }
 
 .hero-card {
-  background: #fff;
-  border-radius: 14px;
+  background: var(--app-bg-white);
+  border-radius: var(--radius-lg);
   padding: 14px;
   display: flex;
   gap: 12px;
@@ -764,7 +764,7 @@ onMounted(() => {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #2fb37f, #07c160);
+  background: var(--app-primary-gradient);
   color: #fff;
   display: flex;
   align-items: center;
@@ -788,20 +788,20 @@ onMounted(() => {
 .hero-name {
   margin-top: 4px;
   font-size: 16px;
-  color: #222;
+  color: var(--app-text-primary);
   font-weight: 600;
 }
 
 .hero-desc {
   margin-top: 6px;
   font-size: 13px;
-  color: #7c8698;
+  color: var(--app-text-muted);
   line-height: 1.5;
 }
 
 .section-card {
-  background: #fff;
-  border-radius: 14px;
+  background: var(--app-bg-white);
+  border-radius: var(--radius-lg);
   padding: 12px;
 }
 
@@ -810,24 +810,24 @@ onMounted(() => {
   align-items: center;
   gap: 6px;
   font-weight: 600;
-  color: #1f2329;
+  color: var(--app-text-primary);
 }
 
 .section-value {
   margin-top: 8px;
   font-size: 13px;
-  color: #333;
+  color: var(--app-text-primary);
   line-height: 1.4;
 }
 
 .sub-text {
   margin-top: 4px;
-  color: #7c8698;
+  color: var(--app-text-muted);
 }
 
 .empty-tip {
   margin-top: 8px;
-  color: #a0a7b4;
+  color: var(--app-text-placeholder);
   font-size: 13px;
 }
 
@@ -842,7 +842,7 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 10px 0;
-  border-bottom: 1px solid #f3f3f3;
+  border-bottom: 1px solid var(--app-border-light);
 }
 
 .form-item.column {
@@ -859,12 +859,12 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #1f2329;
+  color: var(--app-text-primary);
   font-size: 14px;
 }
 
 .picker-cell-value.empty {
-  color: #a0a7b4;
+  color: var(--app-text-placeholder);
 }
 
 .form-item:last-child {
@@ -879,10 +879,10 @@ onMounted(() => {
   width: calc(100vw - 24px);
   max-width: 456px;
   z-index: 20;
-  background: #fff;
+  background: var(--app-bg-white);
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
-  border-radius: 14px;
-  border: 1px solid #ebedf0;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--app-border);
   padding: 10px 12px;
   display: flex;
   align-items: center;
@@ -890,7 +890,7 @@ onMounted(() => {
 }
 
 .pay-price {
-  color: #333;
+  color: var(--app-text-primary);
   font-size: 14px;
 }
 
@@ -905,8 +905,8 @@ onMounted(() => {
   height: 40px;
   min-width: 130px;
   border-radius: 22px;
-  background: #07c160;
-  border-color: #07c160;
+  background: var(--app-primary);
+  border-color: var(--app-primary);
 }
 
 .drawer-panel {
@@ -926,7 +926,7 @@ onMounted(() => {
 }
 
 .picker-item {
-  border: 1px solid #ebedf0;
+  border: 1px solid var(--app-border);
   border-radius: 10px;
   padding: 10px;
   display: flex;
@@ -952,13 +952,13 @@ onMounted(() => {
 
 .picker-title {
   font-size: 14px;
-  color: #1f2329;
+  color: var(--app-text-primary);
 }
 
 .picker-desc {
   margin-top: 4px;
   font-size: 12px;
-  color: #7c8698;
+  color: var(--app-text-muted);
   line-height: 1.45;
 }
 
@@ -977,7 +977,7 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   padding: 12px 16px;
-  background: #fff;
+  background: var(--app-bg-white);
   margin-bottom: 4px;
 }
 .search-input-wrap {
@@ -991,13 +991,13 @@ onMounted(() => {
 .search-icon { color: #999; font-size: 16px; margin-right: 6px; flex-shrink: 0; }
 .search-input {
   flex: 1; border: none; outline: none; background: transparent;
-  font-size: 14px; color: #333; line-height: 24px;
+  font-size: 14px; color: var(--app-text-primary); line-height: 24px;
 }
 .search-input::placeholder { color: #bbb; }
 .clear-icon { color: #ccc; font-size: 16px; cursor: pointer; flex-shrink: 0; }
 .search-btn { flex-shrink: 0; height: 32px; padding: 0 16px; font-size: 13px; }
 
-.category-tabs { background: #fff; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+.category-tabs { background: var(--app-bg-white); padding: 8px 0; border-bottom: 1px solid var(--app-border-light); }
 .tabs-scroll {
   display: flex; overflow-x: auto; padding: 0 16px; gap: 10px;
   -webkit-overflow-scrolling: touch;
@@ -1005,7 +1005,7 @@ onMounted(() => {
 .tabs-scroll::-webkit-scrollbar { display: none; }
 .tab-chip {
   flex-shrink: 0; padding: 5px 14px; border-radius: 16px;
-  font-size: 13px; color: #666; background: #f5f6f8;
+  font-size: 13px; color: var(--app-text-secondary); background: #f5f6f8;
   white-space: nowrap; cursor: pointer; transition: all 0.2s;
 }
 .tab-chip.active { color: #1989fa; background: #e8f4ff; font-weight: 500; }

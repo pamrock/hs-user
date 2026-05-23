@@ -15,17 +15,17 @@
     <div class="menu-list">
       <div class="menu-item" @click="showEditDrawer = true">
         <div class="menu-left">
-          <el-icon class="menu-icon" color="#1e3c72"><Setting /></el-icon>
+          <el-icon class="menu-icon" color="var(--app-primary)"><Setting /></el-icon>
           <span>个人信息设置</span>
         </div>
-        <el-icon color="#999"><ArrowRight /></el-icon>
+        <el-icon color="var(--app-text-muted)"><ArrowRight /></el-icon>
       </div>
       <div class="menu-item" @click="showPasswordDialog = true">
         <div class="menu-left">
-          <el-icon class="menu-icon" color="#1e3c72"><Lock /></el-icon>
+          <el-icon class="menu-icon" color="var(--app-primary)"><Lock /></el-icon>
           <span>修改密码</span>
         </div>
-        <el-icon color="#999"><ArrowRight /></el-icon>
+        <el-icon color="var(--app-text-muted)"><ArrowRight /></el-icon>
       </div>
     </div>
 
@@ -419,13 +419,13 @@ onMounted(() => {
 <style scoped>
 .profile-container {
   padding: 16px;
-  background: #f7f8fa;
-  min-height: calc(100vh - 84px);
+  background: var(--app-bg);
+  min-height: calc(100dvh - var(--tab-bar-height));
 }
 
 .user-header {
-  background: #fff;
-  border-radius: 14px;
+  background: var(--app-bg-white);
+  border-radius: var(--radius-lg);
   padding: 16px;
   display: flex;
   align-items: center;
@@ -436,19 +436,19 @@ onMounted(() => {
 .user-info h3 {
   margin: 0 0 6px;
   font-size: 17px;
-  color: #1f2329;
+  color: var(--app-text-primary);
 }
 
 .user-info p {
   margin: 0;
-  color: #7c8698;
+  color: var(--app-text-muted);
   font-size: 12px;
   line-height: 1.5;
 }
 
 .menu-list {
-  background: #fff;
-  border-radius: 14px;
+  background: var(--app-bg-white);
+  border-radius: var(--radius-lg);
   padding: 0 14px;
 }
 
@@ -469,7 +469,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #1f2329;
+  color: var(--app-text-primary);
   font-size: 15px;
 }
 
@@ -487,7 +487,7 @@ onMounted(() => {
   border-radius: 22px;
   color: #ff4d4f;
   border-color: #ff4d4f;
-  background: #fff;
+  background: var(--app-bg-white);
 }
 
 .drawer-content {
@@ -549,6 +549,6 @@ onMounted(() => {
 
 :deep(.password-dialog .el-dialog) {
   max-width: 456px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
 }
 </style>

@@ -11,6 +11,10 @@
     </div>
 
     <div class="message-list" ref="msgListRef" @scroll="handleScroll">
+      <div v-if="!loading && messages.length === 0" class="empty-messages">
+        <p>暂无消息</p>
+        <p class="empty-hint">发送一条消息开始沟通</p>
+      </div>
       <div v-if="hasMore" class="load-more-wrap">
         <el-button v-if="!loadingMore" text size="small" @click="loadMore">加载更多消息</el-button>
         <span v-else class="loading-text">加载中...</span>
@@ -20,8 +24,8 @@
       </div>
       <template v-for="msg in messages" :key="msg.id">
         <div class="time-divider" v-if="shouldShowTime(msg, messages)">{{ formatTime(msg.createTime) }}</div>
-        <div class="message-row" :class="{ 'is-self': isSelf(msg) }">
-          <div class="avatar" v-if="!isSelf(msg)">{{ contactAvatar }}</div>
+        <div class="message-row" :class="{ 'is-self': isSelf(msg), 'is-grouped': isGrouped(msg, messages) }">
+          <div class="avatar" v-if="!isSelf(msg) && !isGrouped(msg, messages)">{{ contactAvatar }}</div>
           <div class="message-bubble" :class="{ 'is-self': isSelf(msg) }">
             <img
               v-if="msg.msgType === 'image'"
@@ -31,7 +35,7 @@
             />
             <div v-else class="msg-text">{{ msg.content }}</div>
           </div>
-          <div class="avatar avatar-self" v-if="isSelf(msg)">{{ myAvatar }}</div>
+          <div class="avatar avatar-self" v-if="isSelf(msg) && !isGrouped(msg, messages)">{{ myAvatar }}</div>
         </div>
       </template>
       <div v-if="!canSend" class="chat-closed-hint">
@@ -111,6 +115,15 @@ const shouldShowTime = (msg, list) => {
   const prev = list[idx - 1]
   const diff = new Date(msg.createTime) - new Date(prev.createTime)
   return diff > 5 * 60 * 1000
+}
+
+const isGrouped = (msg, list) => {
+  const idx = list.indexOf(msg)
+  if (idx === 0) return false
+  const prev = list[idx - 1]
+  if (prev.senderRole !== msg.senderRole) return false
+  const diff = Math.abs(new Date(msg.createTime) - new Date(prev.createTime))
+  return diff < 2 * 60 * 1000
 }
 
 const formatTime = (time) => {
@@ -332,12 +345,12 @@ onUnmounted(() => {
 .contact-name {
   font-size: 16px;
   font-weight: 600;
-  color: #1f2329;
+  color: var(--app-text-primary);
 }
 
 .order-snippet {
   font-size: 12px;
-  color: #888;
+  color: var(--app-text-muted);
 }
 
 .message-list {
@@ -370,11 +383,19 @@ onUnmounted(() => {
   justify-content: flex-end;
 }
 
+.message-row.is-grouped {
+  margin-top: 1px;
+}
+
+.message-row.is-grouped .message-bubble {
+  margin-top: 0;
+}
+
 .avatar, .avatar-self {
   width: 34px;
   height: 34px;
   border-radius: 4px;
-  background: #1e3c72;
+  background: var(--app-primary);
   color: white;
   display: flex;
   align-items: center;
@@ -436,7 +457,7 @@ onUnmounted(() => {
 
 .img-upload-btn {
   flex-shrink: 0;
-  color: #888;
+  color: var(--app-text-muted);
   cursor: pointer;
 }
 
@@ -452,7 +473,7 @@ onUnmounted(() => {
 
 .send-btn {
   flex-shrink: 0;
-  background: #1e3c72;
+  background: var(--app-primary);
   color: white;
   border: none;
   border-radius: 4px;
@@ -487,5 +508,21 @@ onUnmounted(() => {
 .loading-text {
   font-size: 12px;
   color: #aaa;
+}
+.empty-messages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #aaa;
+  gap: 4px;
+}
+.empty-messages p {
+  margin: 0;
+  font-size: 14px;
+}
+.empty-hint {
+  font-size: 12px !important;
 }
 </style>
