@@ -22,7 +22,7 @@
 
       <!-- 分类标签栏 -->
       <div class="category-tabs" v-if="categoryList.length">
-        <div class="tabs-scroll">
+        <div ref="categoryTabsRef" class="tabs-scroll">
           <div
             v-for="cat in categoryList"
             :key="cat.categoryCode"
@@ -258,7 +258,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft, ArrowRight, Check, Location, Picture, Search, CircleClose, User } from '@element-plus/icons-vue'
 import { regionData } from 'element-china-area-data'
@@ -417,6 +417,14 @@ const handleCategoryChange = (code) => {
     selectedCategory.value = code
     searchKeyword.value = ''
   }
+  nextTick(() => {
+    if (categoryTabsRef.value) {
+      const activeEl = categoryTabsRef.value.querySelector('.active')
+      if (activeEl) {
+        activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+      }
+    }
+  })
   loadServiceList()
 }
 

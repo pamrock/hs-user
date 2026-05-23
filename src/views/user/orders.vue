@@ -4,7 +4,7 @@
       <h2>我的订单</h2>
     </div>
 
-    <div class="status-tabs">
+    <div ref="tabsRef" class="status-tabs">
       <div
         v-for="tab in tabs"
         :key="tab.value"
@@ -160,7 +160,7 @@
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, reactive, ref } from 'vue'
+import { nextTick, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Picture } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -180,6 +180,7 @@ const tabs = [
 ]
 
 const activeTab = ref('all')
+const tabsRef = ref(null)
 const loading = ref(false)
 const orderList = ref([])
 const total = ref(0)
@@ -261,6 +262,14 @@ const handleTabChange = (value) => {
   activeTab.value = value
   queryParams.pageNum = 1
   fetchList()
+  nextTick(() => {
+    if (tabsRef.value) {
+      const activeTabEl = tabsRef.value.querySelector('.tab-item.active')
+      if (activeTabEl) {
+        activeTabEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+      }
+    }
+  })
 }
 
 const handleCurrentChange = (value) => {

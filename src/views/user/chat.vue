@@ -10,7 +10,11 @@
       </div>
     </div>
 
-    <div class="message-list" ref="msgListRef">
+    <div class="message-list" ref="msgListRef" @scroll="handleScroll">
+      <div v-if="hasMore" class="load-more-wrap">
+        <el-button v-if="!loadingMore" text size="small" @click="loadMore">加载更多消息</el-button>
+        <span v-else class="loading-text">加载中...</span>
+      </div>
       <div v-if="loading" class="loading-wrap">
         <span>加载中...</span>
       </div>
@@ -32,6 +36,9 @@
       </template>
       <div v-if="!canSend" class="chat-closed-hint">
         {{ chatDisabledReason }}
+      </div>
+      <div v-if="showScrollBtn" class="scroll-to-bottom" @click="scrollToBottom">
+        <el-icon><ArrowDown /></el-icon>
       </div>
     </div>
 
@@ -66,7 +73,7 @@
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft, PictureFilled } from '@element-plus/icons-vue'
+import { ArrowLeft, PictureFilled, ArrowDown } from '@element-plus/icons-vue'
 import { connect, sendMessage, disconnect, isConnected } from '@/utils/stomp'
 import { getMessages, markMessagesRead, canChat, uploadChatImage } from '@/api/message'
 import { getOrderDetail } from '@/api/order'
@@ -89,6 +96,10 @@ const previewUrl = ref('')
 const contactName = ref('服务人员')
 const contactAvatar = ref('服')
 const myAvatar = ref('我')
+const hasMore = ref(true)
+const currentPage = ref(1)
+const loadingMore = ref(false)
+const showScrollBtn = ref(false)
 
 const token = getUserToken()
 
@@ -110,10 +121,39 @@ const formatTime = (time) => {
   return `${hh}:${min}`
 }
 
-const scrollToBottom = async () => {
-  await nextTick()
-  if (msgListRef.value) {
-    msgListRef.value.scrollTop = msgListRef.value.scrollHeight
+const scrollToBottom = () => {
+  nextTick(() => {
+    if (msgListRef.value) {
+      msgListRef.value.scrollTop = msgListRef.value.scrollHeight
+      showScrollBtn.value = false
+    }
+  })
+}
+
+const handleScroll = () => {
+  const el = msgListRef.value
+  if (!el) return
+  showScrollBtn.value = el.scrollHeight - el.scrollTop - el.clientHeight > 150
+}
+
+const loadMore = async () => {
+  if (loadingMore.value) return
+  loadingMore.value = true
+  const nextPage = currentPage.value + 1
+  try {
+    const res = await getMessages(orderId.value, { pageNo: nextPage, pageSize: 20 })
+    const list = res.data?.records || res.data?.data || res.data || []
+    if (list.length > 0) {
+      messages.value = [...list.reverse(), ...messages.value]
+      currentPage.value = nextPage
+    }
+    if (list.length < 20) {
+      hasMore.value = false
+    }
+  } catch (e) {
+    ElMessage.warning('加载更多消息失败')
+  } finally {
+    loadingMore.value = false
   }
 }
 
@@ -424,5 +464,28 @@ onUnmounted(() => {
 .send-btn:disabled {
   background: #c0c4cc;
   cursor: not-allowed;
+}
+.scroll-to-bottom {
+  position: sticky;
+  bottom: 10px;
+  float: right;
+  width: 36px;
+  height: 36px;
+  background: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  cursor: pointer;
+  z-index: 10;
+}
+.load-more-wrap {
+  text-align: center;
+  padding: 10px 0;
+}
+.loading-text {
+  font-size: 12px;
+  color: #aaa;
 }
 </style>

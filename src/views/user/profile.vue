@@ -3,7 +3,7 @@
     <div class="user-header">
       <el-avatar
         :size="68"
-        :src="userInfo.avatar || 'https://cube.elemecdn.com/0/88/03b0f1ac001e48612fc7f392099a41jpeg.jpeg'"
+        :src="userInfo.avatar || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Ccircle cx=\'50\' cy=\'40\' r=\'24\' fill=\'%23c8d6e5\'/%3E%3Cellipse cx=\'50\' cy=\'85\' rx=\'35\' ry=\'20\' fill=\'%23c8d6e5\'/%3E%3C/svg%3E'"
       />
       <div class="user-info">
         <h3>{{ userInfo.realName || userInfo.username || '微信用户' }}</h3>
@@ -56,7 +56,7 @@
             >
               <el-avatar
                 :size="72"
-                :src="profileForm.avatar || 'https://cube.elemecdn.com/0/88/03b0f1ac001e48612fc7f392099a41jpeg.jpeg'"
+                :src="profileForm.avatar || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Ccircle cx=\'50\' cy=\'40\' r=\'24\' fill=\'%23c8d6e5\'/%3E%3Cellipse cx=\'50\' cy=\'85\' rx=\'35\' ry=\'20\' fill=\'%23c8d6e5\'/%3E%3C/svg%3E'"
               />
               <div class="avatar-edit-hint">点击更换</div>
             </el-upload>
@@ -125,7 +125,7 @@
 import { onMounted, reactive, ref } from 'vue'
 import { ArrowRight, Lock, Setting } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { regionData } from 'element-china-area-data'
 import { getUserInfo, updatePassword, updateUserBySelf } from '@/api/user'
 import { getCustomerAddressList, updateCustomer } from '@/api/customer'
@@ -401,9 +401,14 @@ const handleChangePassword = async () => {
 }
 
 const handleLogout = () => {
-  removeUserToken()
-  ElMessage.success('已退出登录')
-  router.push('/user/login')
+  ElMessageBox.confirm('确定要退出登录吗？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(() => {
+    removeUserToken()
+    router.push('/user/login')
+  }).catch(() => {})
 }
 
 onMounted(() => {
