@@ -215,6 +215,10 @@ const fetchList = async () => {
       reqData.status = activeTab.value
     }
     const res = await getMyOrderList(reqData)
+    if (!res.success) {
+      ElMessage.error(res.msg || '加载订单列表失败')
+      return
+    }
     const data = res.data || {}
     orderList.value = data.records || data.list || (Array.isArray(data) ? data : [])
     total.value = data.total || orderList.value.length || 0

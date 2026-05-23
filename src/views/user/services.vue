@@ -386,6 +386,10 @@ const loadServiceList = async () => {
       params.itemName = searchKeyword.value.trim()
     }
     const res = await getItemList(params)
+    if (!res.success) {
+      ElMessage.error(res.msg || '加载服务列表失败')
+      return
+    }
     const data = res?.data || res
     serviceList.value = data?.records || data?.list || (Array.isArray(data) ? data : [])
   } catch (e) {
