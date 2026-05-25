@@ -1009,7 +1009,7 @@ onMounted(() => {
   flex: 1;
   display: flex;
   align-items: center;
-  background: #f5f6f8;
+  background: var(--app-bg-input);
   border-radius: 20px;
   padding: 6px 14px;
 }
@@ -1072,5 +1072,12 @@ onMounted(() => {
   background: var(--app-primary);
   transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="dark"] .card-cover {
+  background: linear-gradient(145deg, #1a2a3a, #1a2838);
+}
+[data-theme="dark"] .price {
+  color: #ff7043;
 }
 </style>

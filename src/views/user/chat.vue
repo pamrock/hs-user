@@ -320,21 +320,21 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   height: 100dvh;
-  background: #f0f0f0;
+  background: var(--app-bg);
 }
 
 .chat-header {
   display: flex;
   align-items: center;
   padding: 10px 12px;
-  background: #f5f7fa;
-  border-bottom: 1px solid #e5e5e5;
+  background: var(--app-bg-white);
+  border-bottom: 1px solid var(--app-border);
 }
 
 .back-btn {
   font-size: 20px;
   margin-right: 10px;
-  color: #333;
+  color: var(--app-text-primary);
   cursor: pointer;
 }
 
@@ -361,7 +361,7 @@ onUnmounted(() => {
 
 .loading-wrap {
   text-align: center;
-  color: #aaa;
+  color: var(--app-text-muted);
   padding: 20px;
   font-size: 13px;
 }
@@ -369,7 +369,7 @@ onUnmounted(() => {
 .time-divider {
   text-align: center;
   font-size: 11px;
-  color: #aaa;
+  color: var(--app-text-muted);
   margin: 10px 0;
 }
 
@@ -417,7 +417,7 @@ onUnmounted(() => {
   max-width: 65%;
   padding: 10px 13px;
   border-radius: 4px 14px 14px 14px;
-  background: white;
+  background: var(--app-bg-white);
   word-break: break-all;
 }
 
@@ -428,7 +428,7 @@ onUnmounted(() => {
 
 .msg-text {
   font-size: 14px;
-  color: #333;
+  color: var(--app-text-primary);
   line-height: 1.5;
 }
 
@@ -441,7 +441,7 @@ onUnmounted(() => {
 
 .chat-closed-hint {
   text-align: center;
-  color: #999;
+  color: var(--app-text-muted);
   font-size: 13px;
   padding: 20px;
 }
@@ -450,8 +450,8 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   padding: 8px 10px;
-  background: white;
-  border-top: 1px solid #e5e5e5;
+  background: var(--app-bg-white);
+  border-top: 1px solid var(--app-border);
   gap: 8px;
 }
 
@@ -467,7 +467,7 @@ onUnmounted(() => {
   outline: none;
   font-size: 14px;
   padding: 8px 4px;
-  background: #f5f5f5;
+  background: var(--app-bg-input);
   border-radius: 4px;
 }
 
@@ -492,7 +492,7 @@ onUnmounted(() => {
   float: right;
   width: 36px;
   height: 36px;
-  background: #fff;
+  background: var(--app-bg-white);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -507,7 +507,7 @@ onUnmounted(() => {
 }
 .loading-text {
   font-size: 12px;
-  color: #aaa;
+  color: var(--app-text-muted);
 }
 .empty-messages {
   display: flex;
@@ -515,7 +515,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #aaa;
+  color: var(--app-text-muted);
   gap: 4px;
 }
 .empty-messages p {

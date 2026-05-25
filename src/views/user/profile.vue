@@ -525,7 +525,7 @@ onMounted(() => {
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.45);
-  color: #fff;
+  color: var(--app-bg-white);
   font-size: 11px;
   line-height: 18px;
   text-align: center;
