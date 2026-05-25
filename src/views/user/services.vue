@@ -20,16 +20,20 @@
         <el-button class="search-btn" type="primary" size="small" round @click="handleSearch">搜索</el-button>
       </div>
 
-      <!-- 分类标签栏 -->
+      <!-- Category tabs with sliding indicator + glassmorphism -->
       <div class="category-tabs" v-if="categoryList.length">
-        <div ref="categoryTabsRef" class="tabs-scroll">
-          <div
-            v-for="cat in categoryList"
-            :key="cat.categoryCode"
-            class="tab-chip"
-            :class="{ active: selectedCategory === cat.categoryCode }"
-            @click="handleCategoryChange(cat.categoryCode)"
-          >{{ cat.categoryName }}</div>
+        <div class="tabs-scroll">
+          <div class="tabs-container" ref="tabsContainerRef">
+            <div
+              v-for="cat in categoryList"
+              :key="cat.categoryCode"
+              :ref="el => { if (el) tabRefs[cat.categoryCode] = el }"
+              class="tab-item-cat"
+              :class="{ active: selectedCategory === cat.categoryCode }"
+              @click="handleCategoryChange(cat.categoryCode)"
+            >{{ cat.categoryName }}</div>
+            <div class="tab-indicator" :style="indicatorStyle"></div>
+          </div>
         </div>
       </div>
 
@@ -273,6 +277,9 @@ import { alipayPay } from '@/api/pay'
 const loading = ref(false)
 const categoryList = ref([])
 const selectedCategory = ref('')
+const tabsContainerRef = ref(null)
+const tabRefs = reactive({})
+const indicatorStyle = reactive({ left: '0px', width: '0px' })
 const searchKeyword = ref('')
 const submitting = ref(false)
 const serviceList = ref([])
@@ -410,6 +417,22 @@ const loadCategoryList = async () => {
   }
 }
 
+const updateIndicator = () => {
+  nextTick(() => {
+    const code = selectedCategory.value
+    const activeEl = tabRefs[code]
+    if (!activeEl || !tabsContainerRef.value) {
+      indicatorStyle.left = '0px'
+      indicatorStyle.width = '0px'
+      return
+    }
+    const containerRect = tabsContainerRef.value.getBoundingClientRect()
+    const activeRect = activeEl.getBoundingClientRect()
+    indicatorStyle.left = (activeRect.left - containerRect.left) + 'px'
+    indicatorStyle.width = activeRect.width + 'px'
+  })
+}
+
 const handleCategoryChange = (code) => {
   if (selectedCategory.value === code) {
     selectedCategory.value = ''
@@ -417,12 +440,11 @@ const handleCategoryChange = (code) => {
     selectedCategory.value = code
     searchKeyword.value = ''
   }
+  updateIndicator()
   nextTick(() => {
-    if (categoryTabsRef.value) {
-      const activeEl = categoryTabsRef.value.querySelector('.active')
-      if (activeEl) {
-        activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
-      }
+    const activeEl = tabRefs[selectedCategory.value]
+    if (activeEl) {
+      activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
     }
   })
   loadServiceList()
@@ -616,6 +638,9 @@ onMounted(() => {
   loadCategoryList()
   loadServiceList()
   ensureCurrentUser()
+  nextTick(() => {
+    updateIndicator()
+  })
 })
 </script>
 
@@ -997,16 +1022,55 @@ onMounted(() => {
 .clear-icon { color: #ccc; font-size: 16px; cursor: pointer; flex-shrink: 0; }
 .search-btn { flex-shrink: 0; height: 32px; padding: 0 16px; font-size: 13px; }
 
-.category-tabs { background: var(--app-bg-white); padding: 8px 0; border-bottom: 1px solid var(--app-border-light); }
+.category-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="dark"] .category-tabs {
+  background: rgba(15, 15, 20, 0.85);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
 .tabs-scroll {
-  display: flex; overflow-x: auto; padding: 0 16px; gap: 10px;
+  overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
 .tabs-scroll::-webkit-scrollbar { display: none; }
-.tab-chip {
-  flex-shrink: 0; padding: 5px 14px; border-radius: 16px;
-  font-size: 13px; color: var(--app-text-secondary); background: #f5f6f8;
-  white-space: nowrap; cursor: pointer; transition: all 0.2s;
+
+.tabs-container {
+  display: inline-flex;
+  gap: 24px;
+  padding: 12px 16px;
+  position: relative;
 }
-.tab-chip.active { color: #1989fa; background: #e8f4ff; font-weight: 500; }
+
+.tab-item-cat {
+  display: inline-block;
+  padding: 8px 0;
+  font-size: 14px;
+  color: var(--app-text-muted);
+  cursor: pointer;
+  transition: color 0.2s;
+  white-space: nowrap;
+}
+.tab-item-cat.active {
+  color: var(--app-primary);
+  font-weight: 600;
+}
+
+.tab-indicator {
+  position: absolute;
+  bottom: 12px;
+  height: 3px;
+  border-radius: 1.5px;
+  background: var(--app-primary);
+  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
 </style>
