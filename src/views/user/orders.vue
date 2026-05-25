@@ -142,6 +142,24 @@
       </div>
     </el-dialog>
 
+    <el-dialog v-model="payMethodVisible" title="选择支付方式" width="85%" class="pay-method-dialog">
+      <div class="pay-method-list">
+        <div class="pay-method-item" @click="handleAlipay">
+          <el-icon :size="24" color="#1677FF"><Service /></el-icon>
+          <span>支付宝支付</span>
+          <el-icon :size="16" color="#c0c4cc"><ArrowRight /></el-icon>
+        </div>
+        <div class="pay-method-item demo-item" @click="handleMockPay">
+          <el-icon :size="24" color="#52c41a"><CircleCheck /></el-icon>
+          <div class="demo-label">
+            <span>虚拟支付</span>
+            <span class="demo-tag">Demo</span>
+          </div>
+          <el-icon :size="16" color="#c0c4cc"><ArrowRight /></el-icon>
+        </div>
+      </div>
+    </el-dialog>
+
     <el-dialog v-model="ratingVisible" title="评价服务" width="92%" class="rating-dialog">
       <div class="rating-form">
         <div class="rating-target">订单号：{{ ratingOrder?.orderId || ratingOrder?.id || '-' }}</div>
@@ -166,12 +184,12 @@
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Picture } from '@element-plus/icons-vue'
+import { Picture, Service, CircleCheck, ArrowRight } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { refundOrder, finishService, getMyOrderList, getOrderDetail, submitOrderRating } from '@/api/order'
 import { batchUnreadCount } from '@/api/message'
 import { consumeReadOrderIds } from '@/utils/chat-state'
-import { alipayPay, queryPaymentStatus } from '@/api/pay'
+import { alipayPay, queryPaymentStatus, mockPay } from '@/api/pay'
 import { usePullRefresh } from '@/composables/usePullRefresh'
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 
@@ -218,6 +236,8 @@ const unreadCounts = ref({})
 const ratingVisible = ref(false)
 const ratingSubmitting = ref(false)
 const ratingOrder = ref(null)
+const payMethodVisible = ref(false)
+const pendingPayOrder = ref(null)
 const ratingForm = reactive({
   score: 5,
   comment: ''
@@ -392,6 +412,15 @@ const goPay = async (order) => {
     })
     return
   }
+  pendingPayOrder.value = order
+  payMethodVisible.value = true
+}
+
+const handleAlipay = async () => {
+  const order = pendingPayOrder.value
+  if (!order) return
+  const orderId = order?.orderId || order?.id
+  payMethodVisible.value = false
   try {
     const payRes = await alipayPay({ orderId })
     const payForm = typeof payRes === 'string' ? payRes : payRes?.data
@@ -415,6 +444,25 @@ const goPay = async (order) => {
     }
   } catch (error) {
     ElMessage.warning('支付跳转失败，请在订单中心继续支付')
+  }
+}
+
+const handleMockPay = async () => {
+  const order = pendingPayOrder.value
+  if (!order) return
+  const orderId = order?.orderId || order?.id
+  payMethodVisible.value = false
+  try {
+    const res = await mockPay({ orderId })
+    if (res?.success) {
+      ElMessage.success('支付成功')
+      stopPolling(orderId)
+      await fetchList(true)
+    } else {
+      ElMessage.warning(res?.msg || '支付失败，请稍后重试')
+    }
+  } catch (error) {
+    ElMessage.warning('支付失败，请稍后重试')
   }
 }
 
@@ -811,6 +859,53 @@ onUnmounted(() => {
 
 :deep(.rating-dialog .el-dialog) {
   max-width: 420px;
+  border-radius: var(--radius-md);
+}
+
+.pay-method-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pay-method-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 10px;
+  border: 1px solid var(--app-border);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.pay-method-item:active {
+  background: var(--app-bg-input);
+}
+
+.pay-method-item span {
+  flex: 1;
+  font-size: 15px;
+  color: var(--app-text-primary);
+}
+
+.demo-label {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.demo-tag {
+  font-size: 11px !important;
+  color: var(--app-success) !important;
+  background: rgba(82, 196, 26, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+:deep(.pay-method-dialog .el-dialog) {
+  max-width: 380px;
   border-radius: var(--radius-md);
 }
 </style>

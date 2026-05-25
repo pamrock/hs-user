@@ -17,3 +17,12 @@ export function queryPaymentStatus(data) {
     data
   })
 }
+
+// 虚拟支付（Demo 专用）
+export function mockPay(data) {
+  return request({
+    url: '/mock-pay/pay',
+    method: 'post',
+    data
+  })
+}
