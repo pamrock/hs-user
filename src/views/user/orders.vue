@@ -2,9 +2,6 @@
   <div class="orders-container">
     <div class="header">
       <h2>我的订单</h2>
-      <el-button text circle size="small" @click="handleRefresh" :loading="loading">
-        <el-icon><Refresh /></el-icon>
-      </el-button>
     </div>
 
     <div ref="tabsRef" class="status-tabs">
@@ -19,7 +16,18 @@
       </div>
     </div>
 
-    <div class="order-list" v-loading="loading">
+    <div
+      class="order-list"
+      ref="listContainerRef"
+      @touchstart="onTouchStart"
+      @touchmove="onTouchMove"
+      @touchend="onTouchEnd"
+    >
+      <div class="pull-indicator" :class="pullState" :style="{ height: pullDistance + 'px' }">
+        <span v-if="pullState === 'pulling'">下拉刷新</span>
+        <span v-if="pullState === 'ready'">释放立即刷新</span>
+        <span v-if="pullState === 'loading'">刷新中...</span>
+      </div>
       <template v-if="orderList.length">
         <div class="order-card" v-for="order in orderList" :key="order.id" @click="viewDetail(order.orderId || order.id)">
           <div class="order-header">
@@ -92,16 +100,9 @@
             </div>
           </div>
         </div>
-        <div class="pagination-wrap">
-          <el-pagination
-            v-model:current-page="queryParams.pageNum"
-            v-model:page-size="queryParams.pageSize"
-            layout="prev, pager, next"
-            :total="total"
-            :pager-count="5"
-            @current-change="handleCurrentChange"
-          />
-        </div>
+        <div v-if="loadingMore" class="loading-more">加载中...</div>
+        <div v-if="!hasMore && orderList.length > 0" class="no-more">— 没有更多了 —</div>
+        <div ref="sentinelRef" class="scroll-sentinel"></div>
       </template>
       <el-empty v-else :description="emptyMessage" />
     </div>
@@ -165,12 +166,14 @@
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Picture, Refresh } from '@element-plus/icons-vue'
+import { Picture } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { refundOrder, finishService, getMyOrderList, getOrderDetail, submitOrderRating } from '@/api/order'
 import { batchUnreadCount } from '@/api/message'
 import { consumeReadOrderIds } from '@/utils/chat-state'
 import { alipayPay, queryPaymentStatus } from '@/api/pay'
+import { usePullRefresh } from '@/composables/usePullRefresh'
+import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 
 const tabs = [
   { label: '全部', value: 'all' },
@@ -185,12 +188,12 @@ const tabs = [
 const activeTab = ref('all')
 const tabsRef = ref(null)
 const loading = ref(false)
+const loadingMore = ref(false)
 const orderList = ref([])
-const total = ref(0)
-const queryParams = reactive({
-  pageNum: 1,
-  pageSize: 10
-})
+const hasMore = ref(true)
+const listContainerRef = ref(null)
+const pageSize = 10
+let currentPage = 1
 
 const emptyMessage = computed(() => {
   const map = {
@@ -224,10 +227,15 @@ const POLL_INTERVAL = 3000
 const POLL_MAX = 20
 const pollingTimers = {}
 
-const fetchList = async () => {
-  loading.value = true
+const fetchList = async (reset = false) => {
+  if (reset) {
+    currentPage = 1
+    orderList.value = []
+    hasMore.value = true
+    loading.value = true
+  }
   try {
-    const reqData = { ...queryParams }
+    const reqData = { pageNum: currentPage, pageSize }
     if (activeTab.value !== 'all') {
       reqData.status = activeTab.value
     }
@@ -237,21 +245,24 @@ const fetchList = async () => {
       return
     }
     const data = res.data || {}
-    orderList.value = data.records || data.list || (Array.isArray(data) ? data : [])
-    total.value = data.total || orderList.value.length || 0
+    const records = data.records || data.list || (Array.isArray(data) ? data : [])
+    if (records.length < pageSize) hasMore.value = false
+    orderList.value = reset ? records : [...orderList.value, ...records]
   } catch (error) {
-    orderList.value = []
-    total.value = 0
+    if (reset) { orderList.value = []; hasMore.value = false }
     ElMessage.error('网络异常，订单列表加载失败')
   } finally {
     loading.value = false
+    loadingMore.value = false
   }
   loadUnreadCounts()
-  orderList.value.forEach(order => {
-    if (isUnpaid(order.status) && !pollingTimers[order.orderId || order.id]) {
-      startPolling(order.orderId || order.id)
-    }
-  })
+  if (reset) {
+    orderList.value.forEach(order => {
+      if (isUnpaid(order.status) && !pollingTimers[order.orderId || order.id]) {
+        startPolling(order.orderId || order.id)
+      }
+    })
+  }
 }
 
 const loadUnreadCounts = async () => {
@@ -276,8 +287,7 @@ const loadUnreadCounts = async () => {
 
 const handleTabChange = (value) => {
   activeTab.value = value
-  queryParams.pageNum = 1
-  fetchList()
+  fetchList(true)
   nextTick(() => {
     if (tabsRef.value) {
       const activeTabEl = tabsRef.value.querySelector('.tab-item.active')
@@ -288,15 +298,17 @@ const handleTabChange = (value) => {
   })
 }
 
-const handleRefresh = () => {
-  queryParams.pageNum = 1
-  fetchList()
+const loadMore = () => {
+  if (loadingMore.value || !hasMore.value) return
+  loadingMore.value = true
+  currentPage++
+  fetchList(false)
 }
 
-const handleCurrentChange = (value) => {
-  queryParams.pageNum = value
-  fetchList()
-}
+const doRefresh = () => fetchList(true)
+
+const { pullState, pullDistance, onTouchStart, onTouchMove, onTouchEnd } = usePullRefresh(doRefresh)
+const { sentinelRef } = useInfiniteScroll(loadMore, hasMore)
 
 const isUnpaid = (status) => status?.toString() === '1'
 const isInService = (status) => status?.toString() === '4'
@@ -615,6 +627,37 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  position: relative;
+}
+
+.pull-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transition: height 0.2s;
+  color: var(--app-text-muted);
+  font-size: 13px;
+}
+
+.loading-more {
+  text-align: center;
+  padding: 12px;
+  color: var(--app-text-muted);
+  font-size: 13px;
+}
+
+.no-more {
+  text-align: center;
+  padding: 12px;
+  color: var(--app-text-placeholder);
+  font-size: 12px;
+}
+
+.scroll-sentinel {
+  height: 1px;
 }
 
 .order-card {
@@ -645,7 +688,7 @@ onUnmounted(() => {
 }
 
 .order-status.danger {
-  color: #f56c6c;
+  color: var(--app-danger);
 }
 
 .order-content {
@@ -657,7 +700,7 @@ onUnmounted(() => {
 .order-img {
   width: 56px;
   height: 56px;
-  background: #f5f7fa;
+  background: var(--app-bg-input);
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -710,12 +753,6 @@ onUnmounted(() => {
   background: var(--app-primary-gradient);
 }
 
-.pagination-wrap {
-  display: flex;
-  justify-content: center;
-  margin-top: 8px;
-}
-
 .view-detail-badge {
   margin-right: 8px;
 }
@@ -729,7 +766,7 @@ onUnmounted(() => {
 .rating-panel {
   margin-top: 16px;
   padding: 12px;
-  background: #fff7e8;
+  background: var(--app-bg-input);
   border-radius: 10px;
 }
 
