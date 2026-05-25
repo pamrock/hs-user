@@ -258,13 +258,31 @@
         </div>
       </div>
     </el-drawer>
+
+    <el-dialog v-model="payMethodVisible" title="选择支付方式" width="85%" class="pay-method-dialog">
+      <div class="pay-method-list">
+        <div class="pay-method-item" @click="handleServiceAlipay">
+          <el-icon :size="24" color="#1677FF"><Service /></el-icon>
+          <span>支付宝支付</span>
+          <el-icon :size="16" color="#c0c4cc"><ArrowRight /></el-icon>
+        </div>
+        <div class="pay-method-item demo-item" @click="handleServiceMockPay">
+          <el-icon :size="24" color="#52c41a"><CircleCheck /></el-icon>
+          <div class="demo-label">
+            <span>虚拟支付</span>
+            <span class="demo-tag">Demo</span>
+          </div>
+          <el-icon :size="16" color="#c0c4cc"><ArrowRight /></el-icon>
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft, ArrowRight, Check, Location, Picture, Search, CircleClose, User } from '@element-plus/icons-vue'
+import { ArrowLeft, ArrowRight, Check, Location, Picture, Search, CircleClose, User, Service, CircleCheck } from '@element-plus/icons-vue'
 import { regionData } from 'element-china-area-data'
 import { getCategoryList } from '@/api/category'
 import { getItemList } from '@/api/item'
@@ -272,7 +290,7 @@ import { getUserInfo } from '@/api/user'
 import { getCustomerAddressList } from '@/api/customer'
 import { getEmployeeList } from '@/api/employee'
 import { addOrder, getAvailableSlots } from '@/api/order'
-import { alipayPay } from '@/api/pay'
+import { alipayPay, mockPay } from '@/api/pay'
 
 const loading = ref(false)
 const categoryList = ref([])
@@ -308,6 +326,8 @@ const orderForm = reactive({
 
 const availableSlotsData = ref(null)
 const slotsLoading = ref(false)
+const payMethodVisible = ref(false)
+let pendingPayOrderId = null
 
 const visitTimeRangeOptions = computed(() => {
   if (!availableSlotsData.value?.availableDates || !orderForm.serviceDate) return []
@@ -619,18 +639,50 @@ const handleSubmitOrder = async () => {
       return
     }
 
-    const payRes = await alipayPay({ orderId })
-    const payForm = typeof payRes === 'string' ? payRes : payRes?.data
-    if (!payForm) {
-      ElMessage.warning('订单已创建，支付跳转失败，请在订单中心继续支付')
-      return
-    }
-    ElMessage.success('下单成功，正在跳转支付')
-    submitPayForm(payForm)
+    // 下单成功，弹出支付方式选择
+    ElMessage.success('下单成功')
+    pendingPayOrderId = orderId
+    payMethodVisible.value = true
   } catch (error) {
     ElMessage.error('下单或支付失败，请稍后重试')
   } finally {
     submitting.value = false
+  }
+}
+
+const handleServiceAlipay = async () => {
+  const orderId = pendingPayOrderId
+  if (!orderId) return
+  payMethodVisible.value = false
+  try {
+    const payRes = await alipayPay({ orderId })
+    const payForm = typeof payRes === 'string' ? payRes : payRes?.data
+    if (!payForm) {
+      ElMessage.warning('支付跳转失败，请在订单中心继续支付')
+      return
+    }
+    ElMessage.success('正在跳转支付')
+    submitPayForm(payForm)
+  } catch (error) {
+    ElMessage.warning('支付跳转失败，请在订单中心继续支付')
+  }
+}
+
+const handleServiceMockPay = async () => {
+  const orderId = pendingPayOrderId
+  if (!orderId) return
+  payMethodVisible.value = false
+  try {
+    const res = await mockPay({ orderId })
+    if (res?.success) {
+      ElMessage.success('支付成功，请等待派单')
+      // 跳转到订单列表
+      backToList()
+    } else {
+      ElMessage.warning(res?.msg || '支付失败，请稍后重试')
+    }
+  } catch (error) {
+    ElMessage.warning('支付失败，请稍后重试')
   }
 }
 
@@ -1079,5 +1131,52 @@ onMounted(() => {
 }
 [data-theme="dark"] .price {
   color: #ff7043;
+}
+
+.pay-method-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pay-method-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 10px;
+  border: 1px solid var(--app-border);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.pay-method-item:active {
+  background: var(--app-bg-input);
+}
+
+.pay-method-item span {
+  flex: 1;
+  font-size: 15px;
+  color: var(--app-text-primary);
+}
+
+.demo-label {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.demo-tag {
+  font-size: 11px !important;
+  color: var(--app-success) !important;
+  background: rgba(82, 196, 26, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+:deep(.pay-method-dialog .el-dialog) {
+  max-width: 380px;
+  border-radius: var(--radius-md);
 }
 </style>
