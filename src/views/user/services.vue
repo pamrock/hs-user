@@ -622,6 +622,8 @@ const handleSubmitOrder = async () => {
       serviceItemId: currentItem.value.id,
       serviceDate: orderForm.serviceDate,
       serviceAddress: formatAddress(selectedAddress.value),
+      contactName: selectedAddress.value?.contactName,
+      contactPhone: selectedAddress.value?.contactPhone,
       visitTimeRange: orderForm.visitTimeRange,
       serviceTimeRange: orderForm.serviceTimeRange,
       amount: orderForm.quantity,
