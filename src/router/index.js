@@ -26,6 +26,12 @@ export const constantRoutes = [
     meta: { title: '沟通', hidden: true }
   },
   {
+    path: '/user/assistant',
+    name: 'UserAssistant',
+    component: () => import('@/views/user/assistant.vue'),
+    meta: { title: 'AI智能客服', hidden: true }
+  },
+  {
     path: '/user',
     component: UserLayout,
     redirect: '/user/services',

@@ -1,5 +1,10 @@
 <template>
   <div class="wechat-page">
+    <!-- AI客服悬浮入口 -->
+    <div class="ai-float-btn" @click="openAiAssistant">
+      <el-icon :size="24"><ChatDotRound /></el-icon>
+    </div>
+
     <div v-if="currentView === 'list'" class="list-page">
       <div class="wechat-header">
         <h2>服务项目</h2>
@@ -282,7 +287,7 @@
 <script setup>
 import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft, ArrowRight, Check, Location, Picture, Search, CircleClose, User, Service, CircleCheck } from '@element-plus/icons-vue'
+import { ArrowLeft, ArrowRight, Check, Location, Picture, Search, CircleClose, User, Service, CircleCheck, ChatDotRound } from '@element-plus/icons-vue'
 import { regionData } from 'element-china-area-data'
 import { getCategoryList } from '@/api/category'
 import { getItemList } from '@/api/item'
@@ -291,6 +296,9 @@ import { getCustomerAddressList } from '@/api/customer'
 import { getEmployeeList } from '@/api/employee'
 import { addOrder, getAvailableSlots } from '@/api/order'
 import { alipayPay, mockPay } from '@/api/pay'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 const loading = ref(false)
 const categoryList = ref([])
@@ -686,6 +694,10 @@ const handleServiceMockPay = async () => {
   } catch (error) {
     ElMessage.warning('支付失败，请稍后重试')
   }
+}
+
+const openAiAssistant = () => {
+  router.push('/user/assistant')
 }
 
 onMounted(() => {
@@ -1175,6 +1187,28 @@ onMounted(() => {
   background: rgba(82, 196, 26, 0.1);
   padding: 2px 6px;
   border-radius: 4px;
+}
+
+.ai-float-btn {
+  position: fixed;
+  right: 16px;
+  bottom: calc(60px + 20px + env(safe-area-inset-bottom));
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: var(--app-primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  z-index: 30;
+  transition: transform 0.15s;
+}
+
+.ai-float-btn:active {
+  transform: scale(0.9);
 }
 
 :deep(.pay-method-dialog .el-dialog) {
