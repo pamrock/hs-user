@@ -134,13 +134,6 @@
               <el-icon><ArrowRight /></el-icon>
             </div>
           </div>
-          <div class="form-item picker-cell" @click="serviceTimeDrawerVisible = true">
-            <span>服务时段</span>
-            <div class="picker-cell-value" :class="{ empty: !orderForm.serviceTimeRange }">
-              <span>{{ orderForm.serviceTimeRange || '请选择服务时段' }}</span>
-              <el-icon><ArrowRight /></el-icon>
-            </div>
-          </div>
           <div class="form-item column">
             <span>订单备注</span>
             <el-input v-model="orderForm.remark" type="textarea" :rows="3" placeholder="请输入备注信息（选填）" />
@@ -193,7 +186,7 @@
           >
             <div class="picker-main">
               <div class="picker-title">{{ employee.realName }}</div>
-              <div class="picker-desc">手机号 {{ employee.phone || '-' }} · 评分 {{ employee.starRating || '-' }}</div>
+              <div class="picker-desc">已服务 {{ employee.completedOrders || 0 }} 单 · 从业 {{ employee.workYears || 0 }} 年 · 评分 {{ employee.starRating || '-' }}</div>
             </div>
             <el-icon v-if="orderForm.employeeId === employee.id" color="var(--app-primary)"><Check /></el-icon>
           </div>
@@ -239,26 +232,6 @@
               <div class="picker-title">{{ option.label }}</div>
             </div>
             <el-icon v-if="orderForm.visitTimeRange === option.value" color="var(--app-primary)"><Check /></el-icon>
-          </div>
-        </div>
-      </div>
-    </el-drawer>
-
-    <el-drawer v-model="serviceTimeDrawerVisible" direction="btt" size="55%" :with-header="false" class="picker-drawer">
-      <div class="drawer-panel">
-        <h4>选择服务时段</h4>
-        <div class="picker-list">
-          <div
-            v-for="option in serviceTimeRangeOptions"
-            :key="option.value"
-            class="picker-item"
-            :class="{ active: orderForm.serviceTimeRange === option.value }"
-            @click="selectServiceTimeRange(option.value)"
-          >
-            <div class="picker-main">
-              <div class="picker-title">{{ option.label }}</div>
-            </div>
-            <el-icon v-if="orderForm.serviceTimeRange === option.value" color="var(--app-primary)"><Check /></el-icon>
           </div>
         </div>
       </div>
@@ -321,14 +294,12 @@ const employeeList = ref([])
 const employeeDrawerVisible = ref(false)
 const dateDrawerVisible = ref(false)
 const visitDrawerVisible = ref(false)
-const serviceTimeDrawerVisible = ref(false)
 
 const orderForm = reactive({
   quantity: 1,
   remark: '',
   serviceDate: '',
   visitTimeRange: '',
-  serviceTimeRange: '',
   employeeId: null
 })
 
@@ -346,15 +317,6 @@ const visitTimeRangeOptions = computed(() => {
     value: `${slot.start}-${slot.end}`
   }))
 })
-
-const serviceTimeRangeOptions = [
-  { label: '1小时', value: '1小时' },
-  { label: '2小时', value: '2小时' },
-  { label: '3小时', value: '3小时' },
-  { label: '4小时', value: '4小时' },
-  { label: '半天', value: '半天' },
-  { label: '全天', value: '全天' }
-]
 
 const weekNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
 const dateOptions = computed(() => {
@@ -405,7 +367,6 @@ const resetOrderForm = () => {
   orderForm.remark = ''
   orderForm.serviceDate = ''
   orderForm.visitTimeRange = ''
-  orderForm.serviceTimeRange = ''
   orderForm.employeeId = null
   availableSlotsData.value = null
 }
@@ -586,11 +547,6 @@ const selectVisitTimeRange = (value) => {
   visitDrawerVisible.value = false
 }
 
-const selectServiceTimeRange = (value) => {
-  orderForm.serviceTimeRange = value
-  serviceTimeDrawerVisible.value = false
-}
-
 const submitPayForm = (payForm) => {
   const wrapperId = 'alipay-pay-form-wrapper'
   const oldWrapper = document.getElementById(wrapperId)
@@ -633,7 +589,6 @@ const handleSubmitOrder = async () => {
       contactName: selectedAddress.value?.contactName,
       contactPhone: selectedAddress.value?.contactPhone,
       visitTimeRange: orderForm.visitTimeRange,
-      serviceTimeRange: orderForm.serviceTimeRange,
       amount: orderForm.quantity,
       price: currentItem.value.price,
       remark: orderForm.remark
