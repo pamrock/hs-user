@@ -75,7 +75,7 @@
             <span v-else>{{ currentItem.itemName?.slice(0, 1) || '服' }}</span>
           </div>
           <div class="hero-info">
-            <div class="hero-price">¥{{ Number(currentItem.price || 0).toFixed(2) }}</div>
+            <div class="hero-price">¥{{ Number(currentItem.price || 0).toFixed(2) }}<span class="fomo-tag total" v-if="detailFomoStats">累计服务 {{ detailFomoStats.totalOrderCount || 0 }} 次</span></div>
             <div class="hero-name">{{ currentItem.itemName }}</div>
             <div class="hero-desc">{{ currentItem.introduction || '暂无服务介绍' }}</div>
             <!-- FOMO 热度标签 -->
@@ -83,7 +83,7 @@
               <span class="fomo-tag today" v-if="detailFomoStats.todayOrderCount > 0">
                 🔥 今日已有 {{ detailFomoStats.todayOrderCount }} 人选择
               </span>
-              <span class="fomo-tag total">累计服务 {{ detailFomoStats.totalOrderCount || 0 }} 次</span>
+              
             </div>
           </div>
         </div>
@@ -105,14 +105,21 @@
 
           <!-- 评价轮播 -->
           <div class="review-carousel-wrap" v-if="reviews.length > 0">
-            <div class="review-carousel-track" ref="carouselTrackRef">
-              <div class="review-carousel-clone" v-for="(r, i) in reviews" :key="'c-'+i">
+            <div class="review-carousel-track">
+              <template v-for="(r, i) in reviews" :key="'a-'+i">
                 <div class="review-card">
                   <div class="review-stars">{{ '★'.repeat(Math.round(r.score || 5)) }}{{ '☆'.repeat(5 - Math.round(r.score || 5)) }}</div>
                   <div class="review-comment">{{ r.comment }}</div>
                   <div class="review-author">{{ r.customerName }}</div>
                 </div>
-              </div>
+              </template>
+              <template v-for="(r, i) in reviews" :key="'b-'+i">
+                <div class="review-card">
+                  <div class="review-stars">{{ '★'.repeat(Math.round(r.score || 5)) }}{{ '☆'.repeat(5 - Math.round(r.score || 5)) }}</div>
+                  <div class="review-comment">{{ r.comment }}</div>
+                  <div class="review-author">{{ r.customerName }}</div>
+                </div>
+              </template>
             </div>
           </div>
         </div>
@@ -284,8 +291,6 @@ const isHotItem = (itemId) => {
 const reviews = ref([])
 const aiSummary = ref('')
 const aiSummaryLoading = ref(false)
-const carouselTrackRef = ref(null)
-let carouselAnimId = null
 
 const visitTimeRangeOptions = computed(() => {
   if (!availableSlotsData.value?.availableDates || !orderForm.serviceDate) return []
@@ -405,54 +410,50 @@ const loadAiSummary = async (itemId) => {
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ serviceItemId: itemId })
     })
+    if (!resp.ok) {
+      aiSummary.value = 'AI服务暂时不可用'
+      return
+    }
     const reader = resp.body.getReader()
     const decoder = new TextDecoder()
     let buffer = ''
     while (true) {
       const { done, value } = await reader.read()
-      if (done) break
+      if (done) {
+        if (buffer.trim()) processSSELine(buffer)
+        break
+      }
       buffer += decoder.decode(value, { stream: true })
       const lines = buffer.split('\n')
       buffer = lines.pop() || ''
-      for (const line of lines) {
-        if (line.startsWith('data:')) {
-          const data = line.substring(5).trim()
-          if (!data) continue
-          try {
-            const parsed = JSON.parse(data)
-            if (parsed.event === 'done') continue
-            aiSummary.value += parsed.data || ''
-          } catch {
-            aiSummary.value += data
-          }
-        }
-      }
+      for (const line of lines) processSSELine(line)
     }
   } catch (e) {
     console.error('AI总结加载失败', e)
-    aiSummary.value = reviews.value.length ? '暂无AI总结' : ''
+    if (!aiSummary.value) aiSummary.value = reviews.value.length ? '暂无AI总结' : ''
   } finally {
     aiSummaryLoading.value = false
   }
 }
 
-const startCarousel = () => {
-  if (!carouselTrackRef.value || reviews.value.length === 0) return
-  const track = carouselTrackRef.value
-  let pos = 0
-  const step = 0.5
-  const animate = () => {
-    pos += step
-    if (pos >= track.scrollWidth / 2) pos = 0
-    track.style.transform = `translateX(${-pos}px)`
-    carouselAnimId = requestAnimationFrame(animate)
+const processSSELine = (line) => {
+  if (!line.startsWith('data:')) return
+  const data = line.substring(5).trim()
+  if (!data || data === 'null') return
+  try {
+    const parsed = JSON.parse(data)
+    if (parsed && parsed.event === 'done') return
+    aiSummary.value += parsed?.data || parsed || ''
+  } catch {
+    aiSummary.value += data
   }
-  animate()
 }
 
-const stopCarousel = () => {
-  if (carouselAnimId) { cancelAnimationFrame(carouselAnimId); carouselAnimId = null }
+const startCarousel = () => {
+  // CSS animation handles the scrolling; no JS needed
 }
+
+const stopCarousel = () => {}
 
 const updateIndicator = () => {
   nextTick(() => {
@@ -607,7 +608,7 @@ const handleServiceMockPay = async () => {
 const openAiAssistant = () => { router.push('/user/assistant') }
 
 onMounted(() => { loadCategoryList(); loadServiceList(); ensureCurrentUser(); nextTick(() => updateIndicator()) })
-onUnmounted(() => { stopCarousel() })
+onUnmounted(() => {})
 </script>
 
 <style scoped>
@@ -647,10 +648,10 @@ onUnmounted(() => { stopCarousel() })
 .hero-card { background: var(--app-bg-white); border-radius: var(--radius-lg); padding: 14px; display: flex; gap: 12px; }
 .hero-icon { width: 56px; height: 56px; border-radius: 50%; background: var(--app-primary-gradient); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 600; overflow: hidden; flex-shrink: 0; }
 .hero-img { width: 100%; height: 100%; object-fit: cover; }
-.hero-price { font-size: 20px; color: #fa541c; font-weight: 700; }
+.hero-price { font-size: 20px; color: #fa541c; font-weight: 700; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .hero-name { margin-top: 4px; font-size: 16px; color: var(--app-text-primary); font-weight: 600; }
 .hero-desc { margin-top: 6px; font-size: 13px; color: var(--app-text-muted); line-height: 1.5; }
-.fomo-hero-tags { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
+.fomo-hero-tags { margin-top: 6px; display: flex; gap: 8px; flex-wrap: wrap; }
 .fomo-tag { font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: 12px; }
 .fomo-tag.today { background: #fff3e0; color: #e65100; }
 .fomo-tag.total { background: #e8f5e9; color: #2e7d32; }
@@ -669,10 +670,11 @@ onUnmounted(() => { stopCarousel() })
 .ai-cursor { display: inline-block; color: #667eea; font-weight: 700; animation: blink 1s step-end infinite; }
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
-.review-carousel-wrap { overflow: hidden; border-radius: var(--radius-md); background: var(--app-bg-white); padding: 8px 0; }
-.review-carousel-track { display: flex; gap: 10px; padding: 0 12px; will-change: transform; }
-.review-carousel-clone { flex-shrink: 0; }
-.review-card { width: 200px; background: #fafbfc; border-radius: 10px; padding: 10px 12px; border: 1px solid #eee; display: flex; flex-direction: column; gap: 6px; }
+.review-carousel-wrap { overflow: hidden; border-radius: var(--radius-md); background: var(--app-bg-white); padding: 8px 0; mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent); -webkit-mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent); }
+.review-carousel-track { display: flex; gap: 10px; padding: 0 12px; animation: reviewScroll 40s linear infinite; width: max-content; }
+.review-carousel-track:hover { animation-play-state: paused; }
+@keyframes reviewScroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+.review-card { width: 200px; flex-shrink: 0; background: #fafbfc; border-radius: 10px; padding: 10px 12px; border: 1px solid #eee; display: flex; flex-direction: column; gap: 6px; }
 .review-stars { color: #f5a623; font-size: 13px; letter-spacing: 1px; }
 .review-comment { font-size: 12px; color: #555; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .review-author { font-size: 11px; color: #999; align-self: flex-end; }
