@@ -1,7 +1,26 @@
 <template>
   <div class="wechat-page">
-    <div class="ai-float-btn" @click="openAiAssistant">
+    <!-- 可拖拽隐藏的AI客服悬浮按钮 -->
+    <div
+      v-show="!aiBtnHidden"
+      class="ai-float-btn"
+      :style="{ left: aiBtnPos.x + 'px', top: aiBtnPos.y + 'px' }"
+      @mousedown.prevent="startDrag"
+      @touchstart.prevent="startDrag"
+      @click="onAiBtnClick"
+      @mouseenter="aiBtnHover = true"
+      @mouseleave="aiBtnHover = false"
+    >
       <el-icon :size="24"><ChatDotRound /></el-icon>
+      <span class="ai-float-close" v-show="aiBtnHover" @click.stop="hideAiBtn">×</span>
+    </div>
+    <!-- 恢复按钮 -->
+    <div
+      v-show="aiBtnHidden"
+      class="ai-restore-btn"
+      @click="showAiBtn"
+    >
+      <el-icon :size="18"><ChatDotRound /></el-icon>
     </div>
 
     <!-- ==================== 列表页 ==================== -->
@@ -605,9 +624,68 @@ const handleServiceMockPay = async () => {
   } catch (error) { ElMessage.warning('支付失败，请稍后重试') }
 }
 
+const aiBtnHidden = ref(false)
+const aiBtnHover = ref(false)
+const aiBtnPos = ref({ x: 0, y: 0 })
+let dragStart = { x: 0, y: 0, posX: 0, posY: 0 }
+let isDragging = false
+let dragMoved = false
+
+const initAiBtnPos = () => {
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  aiBtnPos.value = { x: vw - 66, y: vh - 160 }
+}
+
+const startDrag = (e) => {
+  isDragging = true
+  dragMoved = false
+  const touch = e.touches ? e.touches[0] : e
+  dragStart = { x: touch.clientX, y: touch.clientY, posX: aiBtnPos.value.x, posY: aiBtnPos.value.y }
+  const onMove = (ev) => {
+    if (!isDragging) return
+    const t = ev.touches ? ev.touches[0] : ev
+    const dx = t.clientX - dragStart.x
+    const dy = t.clientY - dragStart.y
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) dragMoved = true
+    const vw = window.innerWidth
+    const vh = window.innerHeight
+    aiBtnPos.value = {
+      x: Math.max(0, Math.min(vw - 60, dragStart.posX + dx)),
+      y: Math.max(0, Math.min(vh - 60, dragStart.posY + dy))
+    }
+  }
+  const onUp = () => {
+    isDragging = false
+    window.removeEventListener('mousemove', onMove)
+    window.removeEventListener('mouseup', onUp)
+    window.removeEventListener('touchmove', onMove)
+    window.removeEventListener('touchend', onUp)
+  }
+  window.addEventListener('mousemove', onMove)
+  window.addEventListener('mouseup', onUp)
+  window.addEventListener('touchmove', onMove, { passive: false })
+  window.addEventListener('touchend', onUp)
+}
+
+const onAiBtnClick = () => {
+  if (dragMoved) return
+  router.push('/user/assistant')
+}
+
+const hideAiBtn = () => {
+  aiBtnHidden.value = true
+  aiBtnHover.value = false
+}
+
+const showAiBtn = () => {
+  aiBtnHidden.value = false
+  initAiBtnPos()
+}
+
 const openAiAssistant = () => { router.push('/user/assistant') }
 
-onMounted(() => { loadCategoryList(); loadServiceList(); ensureCurrentUser(); nextTick(() => updateIndicator()) })
+onMounted(() => { loadCategoryList(); loadServiceList(); ensureCurrentUser(); initAiBtnPos(); nextTick(() => updateIndicator()) })
 onUnmounted(() => {})
 </script>
 
@@ -741,7 +819,10 @@ onUnmounted(() => {})
 .pay-method-item span { flex: 1; font-size: 15px; color: var(--app-text-primary); }
 .demo-label { flex: 1; display: flex; align-items: center; gap: 8px; }
 .demo-tag { font-size: 11px !important; color: var(--app-success) !important; background: rgba(82,196,26,0.1); padding: 2px 6px; border-radius: 4px; }
-.ai-float-btn { position: fixed; right: 16px; bottom: calc(60px + 20px + env(safe-area-inset-bottom)); width: 50px; height: 50px; border-radius: 50%; background: var(--app-primary); color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.2); cursor: pointer; z-index: 30; transition: transform 0.15s; }
-.ai-float-btn:active { transform: scale(0.9); }
+.ai-float-btn { position: fixed; width: 50px; height: 50px; border-radius: 50%; background: var(--app-primary); color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.2); cursor: grab; z-index: 30; user-select: none; touch-action: none; }
+.ai-float-btn:active { cursor: grabbing; }
+.ai-float-close { position: absolute; top: -4px; right: -4px; width: 18px; height: 18px; border-radius: 50%; background: #ff4d4f; color: #fff; font-size: 12px; line-height: 18px; text-align: center; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+.ai-restore-btn { position: fixed; right: 0; top: 50%; transform: translateY(-50%); width: 28px; height: 56px; border-radius: 14px 0 0 14px; background: rgba(0,0,0,0.25); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 30; opacity: 0.7; transition: opacity 0.2s, width 0.2s; }
+.ai-restore-btn:hover { opacity: 1; width: 32px; }
 :deep(.pay-method-dialog .el-dialog) { max-width: 380px; border-radius: var(--radius-md); }
 </style>
