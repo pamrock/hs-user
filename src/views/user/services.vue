@@ -6,7 +6,7 @@
       class="ai-float-btn"
       :style="{ left: aiBtnPos.x + 'px', top: aiBtnPos.y + 'px' }"
       @mousedown.prevent="startDrag"
-      @touchstart.prevent="startDrag"
+      @touchstart="startDrag"
       @click="onAiBtnClick"
       @mouseenter="aiBtnHover = true"
       @mouseleave="aiBtnHover = false"
@@ -328,7 +328,7 @@ const dateOptions = computed(() => {
     const today = new Date(); today.setHours(0, 0, 0, 0)
     const isToday = date.getTime() === today.getTime()
     const label = isToday ? `${month}月${day}日 今天 ${weekNames[date.getDay()]}` : `${month}月${day}日 ${weekNames[date.getDay()]}`
-    return { label, value: item.date, disabled: !item.hasSlots }
+    return { label, value: item.date, disabled: !item.timeSlots || !item.timeSlots.length }
   })
 })
 
@@ -631,10 +631,15 @@ let dragStart = { x: 0, y: 0, posX: 0, posY: 0 }
 let isDragging = false
 let dragMoved = false
 
+const getTabBarHeight = () => {
+  const h = getComputedStyle(document.documentElement).getPropertyValue('--tab-bar-height').trim()
+  return parseFloat(h) || 60
+}
+
 const initAiBtnPos = () => {
   const vw = window.innerWidth
   const vh = window.innerHeight
-  aiBtnPos.value = { x: vw - 66, y: vh - 160 }
+  aiBtnPos.value = { x: vw - 66, y: vh - getTabBarHeight() - 100 }
 }
 
 const startDrag = (e) => {
@@ -644,6 +649,7 @@ const startDrag = (e) => {
   dragStart = { x: touch.clientX, y: touch.clientY, posX: aiBtnPos.value.x, posY: aiBtnPos.value.y }
   const onMove = (ev) => {
     if (!isDragging) return
+    if (ev.cancelable) ev.preventDefault()
     const t = ev.touches ? ev.touches[0] : ev
     const dx = t.clientX - dragStart.x
     const dy = t.clientY - dragStart.y
@@ -652,7 +658,7 @@ const startDrag = (e) => {
     const vh = window.innerHeight
     aiBtnPos.value = {
       x: Math.max(0, Math.min(vw - 60, dragStart.posX + dx)),
-      y: Math.max(0, Math.min(vh - 60, dragStart.posY + dy))
+      y: Math.max(0, Math.min(vh - getTabBarHeight() - 10, dragStart.posY + dy))
     }
   }
   const onUp = () => {
