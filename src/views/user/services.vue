@@ -252,6 +252,7 @@
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft, ArrowRight, Check, Location, Picture, Search, CircleClose, User, Service, CircleCheck, ChatDotRound } from '@element-plus/icons-vue'
+import { regionData } from 'element-china-area-data'
 import { getCategoryList } from '@/api/category'
 import { getItemList, getItemRatings, getItemFomoStats } from '@/api/item'
 import { getUserInfo } from '@/api/user'
@@ -347,14 +348,18 @@ const totalAmount = computed(() => {
   return Number(currentItem.value.price) * orderForm.quantity
 })
 
-const formatAddress = (addr) => {
-  if (!addr) return ''
-  const parts = []
-  if (addr.provinceName) parts.push(addr.provinceName)
-  if (addr.cityName) parts.push(addr.cityName)
-  if (addr.districtName) parts.push(addr.districtName)
-  if (addr.detail) parts.push(addr.detail)
-  return parts.join(' ')
+const findRegionLabel = (list, code) => {
+  if (!list || !code) return null
+  return list.find(item => String(item.value) === String(code))
+}
+
+const formatAddress = (address) => {
+  if (!address) return ''
+  const province = findRegionLabel(regionData, address.province)
+  const city = province?.children ? findRegionLabel(province.children, address.city) : null
+  const district = city?.children ? findRegionLabel(city.children, address.district) : null
+  const regionText = [province?.label, city?.label, district?.label].filter(Boolean).join(' ')
+  return `${regionText} ${address.detailAddress || ''}`.trim()
 }
 
 const resetOrderForm = () => {
